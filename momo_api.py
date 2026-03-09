@@ -153,12 +153,11 @@ def momo_debug():
         await api.pool.add_account(username, password, email, password)
         await api.pool.login_all()
         accounts = await api.pool.get_all()
-        return [{
-            'username': a.username,
-            'active':   a.active,
-            'locks':    a.locks,
-            'error':    a.error,
-        } for a in accounts]
+        out = []
+        for a in accounts:
+            out.append({k: str(v) for k, v in vars(a).items()
+                        if not k.startswith('_')})
+        return out
     try:
         result = run_async(_check())
         return jsonify(result)
