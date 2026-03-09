@@ -49,7 +49,13 @@ _cache = {'data': None, 'ts': 0}
 _lock  = threading.Lock()
 CACHE_TTL = 300  # 5 minutes
 
-HEADERS = {'User-Agent': 'momo-index/2.0 (sentiment dashboard)'}
+HEADERS = {
+    'User-Agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                   'AppleWebKit/537.36 (KHTML, like Gecko) '
+                   'Chrome/122.0.0.0 Safari/537.36'),
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+}
 
 
 def score_sentiment(text, upvote_ratio=0.5):
@@ -70,6 +76,7 @@ def fetch_reddit(sym):
                f'?q=%24{sym}&restrict_sr=on&sort=new&t=day&limit=25')
         res = requests.get(url, headers=HEADERS, timeout=10)
         if res.status_code != 200:
+            print(f'Reddit {res.status_code} for {sym}')
             return sym, []
         posts = []
         for c in res.json().get('data', {}).get('children', []):
@@ -129,8 +136,8 @@ def momo_index():
             return jsonify(_cache['data'])
 
     results = []
-    # Fetch all 20 tickers in parallel (5 workers)
-    with ThreadPoolExecutor(max_workers=5) as ex:
+    # Fetch all 20 tickers in parallel (3 workers to avoid Reddit rate limits)
+    with ThreadPoolExecutor(max_workers=3) as ex:
         futures = {ex.submit(fetch_reddit, sym): sym for sym in UNIVERSE}
         for future in as_completed(futures):
             sym, posts = future.result()
