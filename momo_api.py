@@ -74,10 +74,10 @@ async def _fetch_tweets():
         print('X credentials not set')
         return []
 
-    api = TwAPI()  # loads any saved session from accounts.db
+    api = TwAPI()
 
-    # Add account if not already saved; no-op if already present
-    await api.pool.add_account(username, password, email, password)
+    # Use email as username — fixes LoginEnterUserIdentifierSSO error
+    await api.pool.add_account(email, password, email, password)
     await api.pool.login_all()
 
     cashtags = ' OR '.join(f'${s}' for s in UNIVERSE)
@@ -140,30 +140,6 @@ def build_results(raw_tweets):
     return results
 
 
-@momo_bp.route('/api/momo/debug')
-def momo_debug():
-    """GET /api/momo/debug — check login status and account pool."""
-    async def _check():
-        username = os.environ.get('X_USERNAME', '')
-        password = os.environ.get('X_PASSWORD', '')
-        email    = os.environ.get('X_EMAIL', '')
-        if not all([username, password, email]):
-            return {'error': 'credentials not set'}
-        api = TwAPI()
-        await api.pool.add_account(username, password, email, password)
-        await api.pool.login_all()
-        accounts = await api.pool.get_all()
-        out = []
-        for a in accounts:
-            out.append({k: str(v) for k, v in vars(a).items()
-                        if not k.startswith('_')})
-        return out
-    try:
-        result = run_async(_check())
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 503
-
 
 @momo_bp.route('/api/momo')
 def momo_index():
@@ -202,11 +178,10 @@ def momo_ticker(sym):
         return jsonify({'error': 'Ticker not in universe'}), 404
 
     async def _single():
-        username = os.environ.get('X_USERNAME', '')
         password = os.environ.get('X_PASSWORD', '')
         email    = os.environ.get('X_EMAIL', '')
         api = TwAPI()
-        await api.pool.add_account(username, password, email, password)
+        await api.pool.add_account(email, password, email, password)
         await api.pool.login_all()
         tweets = []
         async for t in api.search(f'${sym} -filter:retweets lang:en', limit=30):
