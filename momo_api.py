@@ -1,15 +1,16 @@
 """
 momo_api.py — MOMO Index backend
 Pulls real-time Reddit sentiment from WSB + r/stocks + r/options.
+Uses multi-subreddit batching + parallel fetches to stay fast.
 No API key required.
 """
 
 from flask import Blueprint, jsonify
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 import threading
 import time
 import re
-import os
 
 momo_bp = Blueprint('momo', __name__)
 
@@ -41,7 +42,8 @@ BEAR_WORDS = {
     'bubble','overvalued','topped','bagholder','drilling','rekt'
 }
 
-SUBREDDITS = ['wallstreetbets', 'stocks', 'options', 'investing', 'stockmarket']
+# One request covers all 5 subreddits at once
+MULTI_SUB = 'wallstreetbets+stocks+options+investing+stockmarket'
 
 _cache = {'data': None, 'ts': 0}
 _lock  = threading.Lock()
@@ -51,12 +53,10 @@ HEADERS = {'User-Agent': 'momo-index/2.0 (sentiment dashboard)'}
 
 
 def score_sentiment(text, upvote_ratio=0.5):
-    """Keyword + upvote-ratio sentiment scoring."""
     words = set(re.sub(r'[^a-z\s]', '', text.lower()).split())
     bull  = len(words & BULL_WORDS)
     bear  = len(words & BEAR_WORDS)
-    # Weight upvote ratio: >0.75 = bullish lean, <0.4 = bearish lean
-    if upvote_ratio > 0.75:  bull += 1
+    if upvote_ratio > 0.75: bull += 1
     elif upvote_ratio < 0.40: bear += 1
     if bull > bear:  return 'Bullish'
     if bear > bull:  return 'Bearish'
@@ -64,72 +64,61 @@ def score_sentiment(text, upvote_ratio=0.5):
 
 
 def fetch_reddit(sym):
-    """Fetch recent Reddit posts mentioning $SYM across key subreddits."""
-    posts = []
-    for sub in SUBREDDITS:
-        try:
-            url = (f'https://www.reddit.com/r/{sub}/search.json'
-                   f'?q=%24{sym}&restrict_sr=on&sort=new&t=day&limit=15')
-            res = requests.get(url, headers=HEADERS, timeout=8)
-            if res.status_code != 200:
-                continue
-            children = res.json().get('data', {}).get('children', [])
-            for c in children:
-                d = c.get('data', {})
-                posts.append({
-                    'title':        d.get('title', ''),
-                    'score':        d.get('score', 0),
-                    'upvote_ratio': d.get('upvote_ratio', 0.5),
-                    'num_comments': d.get('num_comments', 0),
-                    'author':       d.get('author', 'anon'),
-                    'created_utc':  d.get('created_utc', 0),
-                    'subreddit':    sub,
-                })
-        except Exception as e:
-            print(f'Reddit fetch error {sub}/{sym}: {e}')
-    return posts
+    """Single request across all subreddits for one ticker."""
+    try:
+        url = (f'https://www.reddit.com/r/{MULTI_SUB}/search.json'
+               f'?q=%24{sym}&restrict_sr=on&sort=new&t=day&limit=25')
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        if res.status_code != 200:
+            return sym, []
+        posts = []
+        for c in res.json().get('data', {}).get('children', []):
+            d = c.get('data', {})
+            posts.append({
+                'title':        d.get('title', ''),
+                'score':        d.get('score', 0),
+                'upvote_ratio': d.get('upvote_ratio', 0.5),
+                'author':       d.get('author', 'anon'),
+                'created_utc':  d.get('created_utc', 0),
+                'subreddit':    d.get('subreddit', ''),
+            })
+        return sym, posts
+    except Exception as e:
+        print(f'Reddit error {sym}: {e}')
+        return sym, []
 
 
 def calc_ticker(sym, posts):
     if not posts:
         return None
-
     bull_count = bear_count = 0
     feed_posts = []
     for p in posts:
-        text = p['title']
-        sent = score_sentiment(text, p['upvote_ratio'])
+        sent = score_sentiment(p['title'], p['upvote_ratio'])
         if sent == 'Bullish':  bull_count += 1
         elif sent == 'Bearish': bear_count += 1
         feed_posts.append({
-            'body':      f"[r/{p['subreddit']}] {text[:120]}",
+            'body':      f"[r/{p['subreddit']}] {p['title'][:120]}",
             'sentiment': sent,
             'user':      p['author'],
-            'followers': p['score'],   # use post score as "influence"
+            'followers': p['score'],
             'time':      time.strftime('%Y-%m-%dT%H:%M:%SZ',
                                        time.gmtime(p['created_utc'])),
         })
-
     total    = bull_count + bear_count or 1
     bull_pct = round(bull_count / total * 100)
-    bear_pct = 100 - bull_pct
-
-    # Momo: activity volume (0-40) + sentiment strength (0-60)
     vol_score  = min(len(posts) / 20 * 40, 40)
     momo_score = min(round(vol_score + bull_pct * 0.6), 100)
-
     return {
         'sym':       sym,
         'name':      NAMES.get(sym, sym),
         'bullCount': bull_count,
         'bearCount': bear_count,
         'bullPct':   bull_pct,
-        'bearPct':   bear_pct,
+        'bearPct':   100 - bull_pct,
         'total':     len(posts),
         'momoScore': momo_score,
-        'posts':     sorted(feed_posts,
-                            key=lambda p: p['followers'],
-                            reverse=True)[:3],
+        'posts':     sorted(feed_posts, key=lambda p: p['followers'], reverse=True)[:3],
     }
 
 
@@ -140,15 +129,21 @@ def momo_index():
             return jsonify(_cache['data'])
 
     results = []
-    for sym in UNIVERSE:
-        posts = fetch_reddit(sym)
-        data  = calc_ticker(sym, posts)
-        if data:
-            results.append(data)
-        time.sleep(0.1)   # be polite to Reddit
+    # Fetch all 20 tickers in parallel (5 workers)
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        futures = {ex.submit(fetch_reddit, sym): sym for sym in UNIVERSE}
+        for future in as_completed(futures):
+            sym, posts = future.result()
+            data = calc_ticker(sym, posts)
+            if data:
+                results.append(data)
 
     if not results:
         return jsonify({'error': 'Reddit unavailable'}), 503
+
+    # Preserve UNIVERSE order
+    order = {s: i for i, s in enumerate(UNIVERSE)}
+    results.sort(key=lambda r: order.get(r['sym'], 99))
 
     payload = {
         'stocks':    results,
@@ -166,8 +161,8 @@ def momo_ticker(sym):
     sym = sym.upper()
     if sym not in UNIVERSE:
         return jsonify({'error': 'Ticker not in universe'}), 404
-    posts = fetch_reddit(sym)
-    data  = calc_ticker(sym, posts)
+    _, posts = fetch_reddit(sym)
+    data = calc_ticker(sym, posts)
     if not data:
         return jsonify({'error': 'No Reddit posts found'}), 503
     return jsonify(data)
