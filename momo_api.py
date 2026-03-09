@@ -49,6 +49,44 @@ _cache = {'data': None, 'ts': 0}
 _lock  = threading.Lock()
 CACHE_TTL = 300  # 5 minutes
 
+
+def _refresh_cache():
+    """Fetch all tickers and update cache. Runs in background thread."""
+    results = []
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        futures = {ex.submit(fetch_reddit, sym): sym for sym in UNIVERSE}
+        for future in as_completed(futures):
+            sym, posts = future.result()
+            data = calc_ticker(sym, posts)
+            if data:
+                results.append(data)
+    if not results:
+        return
+    order = {s: i for i, s in enumerate(UNIVERSE)}
+    results.sort(key=lambda r: order.get(r['sym'], 99))
+    payload = {
+        'stocks':    results,
+        'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    }
+    with _lock:
+        _cache['data'] = payload
+        _cache['ts']   = time.time()
+    print(f'Cache refreshed: {len(results)} tickers')
+
+
+def _schedule_refresh():
+    """Background loop: refresh cache every CACHE_TTL seconds."""
+    while True:
+        try:
+            _refresh_cache()
+        except Exception as e:
+            print(f'Cache refresh error: {e}')
+        time.sleep(CACHE_TTL)
+
+
+# Kick off background refresh immediately on import
+threading.Thread(target=_schedule_refresh, daemon=True).start()
+
 HEADERS = {
     'User-Agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
                    'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -131,36 +169,12 @@ def calc_ticker(sym, posts):
 
 @momo_bp.route('/api/momo')
 def momo_index():
+    """Return cached data — background thread keeps it fresh every 5 min."""
     with _lock:
-        if _cache['data'] and time.time() - _cache['ts'] < CACHE_TTL:
-            return jsonify(_cache['data'])
-
-    results = []
-    # Fetch all 20 tickers in parallel (3 workers to avoid Reddit rate limits)
-    with ThreadPoolExecutor(max_workers=3) as ex:
-        futures = {ex.submit(fetch_reddit, sym): sym for sym in UNIVERSE}
-        for future in as_completed(futures):
-            sym, posts = future.result()
-            data = calc_ticker(sym, posts)
-            if data:
-                results.append(data)
-
-    if not results:
-        return jsonify({'error': 'Reddit unavailable'}), 503
-
-    # Preserve UNIVERSE order
-    order = {s: i for i, s in enumerate(UNIVERSE)}
-    results.sort(key=lambda r: order.get(r['sym'], 99))
-
-    payload = {
-        'stocks':    results,
-        'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-    }
-    with _lock:
-        _cache['data'] = payload
-        _cache['ts']   = time.time()
-
-    return jsonify(payload)
+        data = _cache['data']
+    if not data:
+        return jsonify({'error': 'Warming up — check back in 30 seconds'}), 503
+    return jsonify(data)
 
 
 @momo_bp.route('/api/momo/ticker/<sym>')
