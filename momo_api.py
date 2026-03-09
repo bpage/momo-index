@@ -1,7 +1,7 @@
 """
 momo_api.py — MOMO Index backend
-Uses X session cookies to call X's internal search API directly.
-Requires env vars: X_AUTH_TOKEN, X_CT0
+Pulls real-time Reddit sentiment from WSB + r/stocks + r/options.
+No API key required.
 """
 
 from flask import Blueprint, jsonify
@@ -31,123 +31,106 @@ NAMES = {
 BULL_WORDS = {
     'bull','bullish','long','buy','calls','moon','pump','rip','breakout',
     'upside','support','hold','strong','ath','green','squeeze','rally',
-    'surge','rocket','gains','higher','bounce','oversold','accumulate'
+    'surge','rocket','gains','higher','bounce','oversold','accumulate',
+    'yolo','tendies','printing','mooning','send','run','explode'
 }
 BEAR_WORDS = {
     'bear','bearish','short','sell','puts','dump','crash','drop',
     'breakdown','downside','resistance','weak','red','falling','collapse',
-    'tank','tanking','loss','losses','lower','correction','overbought'
+    'tank','tanking','loss','losses','lower','correction','overbought',
+    'bubble','overvalued','topped','bagholder','drilling','rekt'
 }
 
-# X web app's public bearer token (same for all sessions)
-_X_BEARER = ('AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I45Il1xs%3D'
-             'bQ0JPmjU9F9ZAdrgismI3przy')
+SUBREDDITS = ['wallstreetbets', 'stocks', 'options', 'investing', 'stockmarket']
 
 _cache = {'data': None, 'ts': 0}
 _lock  = threading.Lock()
 CACHE_TTL = 300  # 5 minutes
 
+HEADERS = {'User-Agent': 'momo-index/2.0 (sentiment dashboard)'}
 
-def score_sentiment(text):
+
+def score_sentiment(text, upvote_ratio=0.5):
+    """Keyword + upvote-ratio sentiment scoring."""
     words = set(re.sub(r'[^a-z\s]', '', text.lower()).split())
     bull  = len(words & BULL_WORDS)
     bear  = len(words & BEAR_WORDS)
+    # Weight upvote ratio: >0.75 = bullish lean, <0.4 = bearish lean
+    if upvote_ratio > 0.75:  bull += 1
+    elif upvote_ratio < 0.40: bear += 1
     if bull > bear:  return 'Bullish'
     if bear > bull:  return 'Bearish'
     return 'Neutral'
 
 
-def x_search(query, count=100):
-    """Hit X's internal v1.1 search API using session cookies."""
-    auth_token = os.environ.get('X_AUTH_TOKEN', '')
-    ct0        = os.environ.get('X_CT0', '')
-
-    if not auth_token or not ct0:
-        print('X_AUTH_TOKEN / X_CT0 not set')
-        return []
-
-    res = requests.get(
-        'https://api.twitter.com/1.1/search/tweets.json',
-        headers={
-            'Authorization':  f'Bearer {_X_BEARER}',
-            'Cookie':         f'auth_token={auth_token}; ct0={ct0}',
-            'X-Csrf-Token':   ct0,
-            'User-Agent':     ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-                               'AppleWebKit/537.36 (KHTML, like Gecko) '
-                               'Chrome/122.0.0.0 Safari/537.36'),
-            'Referer':        'https://x.com/',
-            'X-Twitter-Active-User': 'yes',
-            'X-Twitter-Auth-Type':   'OAuth2Session',
-            'X-Twitter-Client-Language': 'en',
-        },
-        params={
-            'q':            query,
-            'count':        count,
-            'tweet_mode':   'extended',
-            'result_type':  'recent',
-            'lang':         'en',
-        },
-        timeout=15,
-    )
-
-    if res.status_code != 200:
-        print(f'X API {res.status_code}: {res.text[:300]}')
-        return []
-
-    return res.json().get('statuses', [])
+def fetch_reddit(sym):
+    """Fetch recent Reddit posts mentioning $SYM across key subreddits."""
+    posts = []
+    for sub in SUBREDDITS:
+        try:
+            url = (f'https://www.reddit.com/r/{sub}/search.json'
+                   f'?q=%24{sym}&restrict_sr=on&sort=new&t=day&limit=15')
+            res = requests.get(url, headers=HEADERS, timeout=8)
+            if res.status_code != 200:
+                continue
+            children = res.json().get('data', {}).get('children', [])
+            for c in children:
+                d = c.get('data', {})
+                posts.append({
+                    'title':        d.get('title', ''),
+                    'score':        d.get('score', 0),
+                    'upvote_ratio': d.get('upvote_ratio', 0.5),
+                    'num_comments': d.get('num_comments', 0),
+                    'author':       d.get('author', 'anon'),
+                    'created_utc':  d.get('created_utc', 0),
+                    'subreddit':    sub,
+                })
+        except Exception as e:
+            print(f'Reddit fetch error {sub}/{sym}: {e}')
+    return posts
 
 
-def build_results(statuses):
-    """Bucket tweets by ticker and compute momo scores."""
-    buckets = {sym: [] for sym in UNIVERSE}
-    for t in statuses:
-        text_up = t.get('full_text', '').upper()
-        for sym in UNIVERSE:
-            if f'${sym}' in text_up:
-                buckets[sym].append(t)
+def calc_ticker(sym, posts):
+    if not posts:
+        return None
 
-    results = []
-    for sym in UNIVERSE:
-        tw = buckets[sym]
-        if not tw:
-            continue
-
-        bull_count = bear_count = 0
-        posts = []
-        for t in tw:
-            text = t.get('full_text', '')
-            sent = score_sentiment(text)
-            if sent == 'Bullish':  bull_count += 1
-            elif sent == 'Bearish': bear_count += 1
-            user = t.get('user', {})
-            posts.append({
-                'body':      text[:140],
-                'sentiment': sent,
-                'user':      user.get('screen_name', 'user'),
-                'followers': user.get('followers_count', 0),
-                'time':      t.get('created_at', ''),
-            })
-
-        total     = bull_count + bear_count or 1
-        bull_pct  = round(bull_count / total * 100)
-        bear_pct  = 100 - bull_pct
-
-        vol_score  = min(len(tw) / 30 * 40, 40)
-        momo_score = min(round(vol_score + bull_pct * 0.6), 100)
-
-        results.append({
-            'sym':       sym,
-            'name':      NAMES.get(sym, sym),
-            'bullCount': bull_count,
-            'bearCount': bear_count,
-            'bullPct':   bull_pct,
-            'bearPct':   bear_pct,
-            'total':     len(tw),
-            'momoScore': momo_score,
-            'posts':     sorted(posts, key=lambda p: p['followers'], reverse=True)[:3],
+    bull_count = bear_count = 0
+    feed_posts = []
+    for p in posts:
+        text = p['title']
+        sent = score_sentiment(text, p['upvote_ratio'])
+        if sent == 'Bullish':  bull_count += 1
+        elif sent == 'Bearish': bear_count += 1
+        feed_posts.append({
+            'body':      f"[r/{p['subreddit']}] {text[:120]}",
+            'sentiment': sent,
+            'user':      p['author'],
+            'followers': p['score'],   # use post score as "influence"
+            'time':      time.strftime('%Y-%m-%dT%H:%M:%SZ',
+                                       time.gmtime(p['created_utc'])),
         })
 
-    return results
+    total    = bull_count + bear_count or 1
+    bull_pct = round(bull_count / total * 100)
+    bear_pct = 100 - bull_pct
+
+    # Momo: activity volume (0-40) + sentiment strength (0-60)
+    vol_score  = min(len(posts) / 20 * 40, 40)
+    momo_score = min(round(vol_score + bull_pct * 0.6), 100)
+
+    return {
+        'sym':       sym,
+        'name':      NAMES.get(sym, sym),
+        'bullCount': bull_count,
+        'bearCount': bear_count,
+        'bullPct':   bull_pct,
+        'bearPct':   bear_pct,
+        'total':     len(posts),
+        'momoScore': momo_score,
+        'posts':     sorted(feed_posts,
+                            key=lambda p: p['followers'],
+                            reverse=True)[:3],
+    }
 
 
 @momo_bp.route('/api/momo')
@@ -156,21 +139,16 @@ def momo_index():
         if _cache['data'] and time.time() - _cache['ts'] < CACHE_TTL:
             return jsonify(_cache['data'])
 
-    cashtags = ' OR '.join(f'${s}' for s in UNIVERSE)
-    query    = f'({cashtags}) -filter:retweets'
+    results = []
+    for sym in UNIVERSE:
+        posts = fetch_reddit(sym)
+        data  = calc_ticker(sym, posts)
+        if data:
+            results.append(data)
+        time.sleep(0.1)   # be polite to Reddit
 
-    try:
-        statuses = x_search(query, count=100)
-    except Exception as e:
-        print(f'x_search error: {e}')
-        return jsonify({'error': 'X fetch failed'}), 503
-
-    if not statuses:
-        return jsonify({'error': 'No tweets returned — check X_AUTH_TOKEN / X_CT0'}), 503
-
-    results = build_results(statuses)
     if not results:
-        return jsonify({'error': 'No ticker matches found'}), 503
+        return jsonify({'error': 'Reddit unavailable'}), 503
 
     payload = {
         'stocks':    results,
@@ -188,43 +166,8 @@ def momo_ticker(sym):
     sym = sym.upper()
     if sym not in UNIVERSE:
         return jsonify({'error': 'Ticker not in universe'}), 404
-
-    try:
-        statuses = x_search(f'${sym} -filter:retweets', count=30)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 503
-
-    if not statuses:
-        return jsonify({'error': 'No tweets found'}), 503
-
-    bull = bear = 0
-    posts = []
-    for t in statuses:
-        text = t.get('full_text', '')
-        sent = score_sentiment(text)
-        if sent == 'Bullish':  bull += 1
-        elif sent == 'Bearish': bear += 1
-        user = t.get('user', {})
-        posts.append({
-            'body':      text[:140],
-            'sentiment': sent,
-            'user':      user.get('screen_name', 'user'),
-            'followers': user.get('followers_count', 0),
-            'time':      t.get('created_at', ''),
-        })
-
-    total     = bull + bear or 1
-    bull_pct  = round(bull / total * 100)
-    momo_score = min(round(min(len(statuses)/30*40, 40) + bull_pct * 0.6), 100)
-
-    return jsonify({
-        'sym':       sym,
-        'name':      NAMES.get(sym, sym),
-        'bullCount': bull,
-        'bearCount': bear,
-        'bullPct':   bull_pct,
-        'bearPct':   100 - bull_pct,
-        'total':     len(statuses),
-        'momoScore': momo_score,
-        'posts':     sorted(posts, key=lambda p: p['followers'], reverse=True)[:3],
-    })
+    posts = fetch_reddit(sym)
+    data  = calc_ticker(sym, posts)
+    if not data:
+        return jsonify({'error': 'No Reddit posts found'}), 503
+    return jsonify(data)
