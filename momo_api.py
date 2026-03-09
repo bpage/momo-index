@@ -247,3 +247,4 @@ def momo_ticker(sym):
         'momoScore': momo_score,
         'posts':     sorted(posts, key=lambda p: p['followers'], reverse=True)[:3],
     })
+# twscrape-based X sentiment backend
