@@ -140,6 +140,32 @@ def build_results(raw_tweets):
     return results
 
 
+@momo_bp.route('/api/momo/debug')
+def momo_debug():
+    """GET /api/momo/debug — check login status and account pool."""
+    async def _check():
+        username = os.environ.get('X_USERNAME', '')
+        password = os.environ.get('X_PASSWORD', '')
+        email    = os.environ.get('X_EMAIL', '')
+        if not all([username, password, email]):
+            return {'error': 'credentials not set'}
+        api = TwAPI()
+        await api.pool.add_account(username, password, email, password)
+        await api.pool.login_all()
+        accounts = await api.pool.get_all()
+        return [{
+            'username': a.username,
+            'active':   a.active,
+            'locks':    a.locks,
+            'error':    a.error,
+        } for a in accounts]
+    try:
+        result = run_async(_check())
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+
+
 @momo_bp.route('/api/momo')
 def momo_index():
     with _lock:
