@@ -194,63 +194,61 @@ def calc_ticker(sym, reddit_posts, x_posts=None):
                             reverse=True)[:5],
     }
 
-# ── Background refresh loop ───────────────────────────────────────────────────
-def _refresh_cache():
-    global _last_x_fetch
+# ── Background refresh loops ──────────────────────────────────────────────────
 
-    now = time.time()
-
-    # Pull fresh X data every 6 hours via Apify
-    with _lock:
-        x_data = dict(_x_cache)
-
-    if APIFY_TOKEN and (now - _last_x_fetch) >= X_TTL:
-        fresh = fetch_x_apify()
-        if fresh:
-            _last_x_fetch = time.time()
-            with _lock:
-                _x_cache.update(fresh)
-                x_data = dict(_x_cache)
-
-    # Always pull fresh Reddit data (sequential, 1s gap = polite + no rate limit)
-    results = []
-    for sym in UNIVERSE:
-        reddit_posts = fetch_reddit(sym)
-        x_posts      = x_data.get(sym, [])
-        data         = calc_ticker(sym, reddit_posts, x_posts)
-        if data:
-            results.append(data)
-        time.sleep(1)
-
-    if not results:
-        print('Cache refresh: no results')
-        return
-
-    sources = ['Reddit']
-    if x_data and any(x_data.values()):
-        sources.append('X/Twitter')
-
-    payload = {
-        'stocks':    results,
-        'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        'sources':   sources,
-    }
-    with _lock:
-        _cache['data'] = payload
-        _cache['ts']   = time.time()
-    print(f'Cache refreshed: {len(results)} tickers | sources: {sources}')
-
-
-def _schedule_refresh():
+def _reddit_loop():
+    """Refresh Reddit data every 5 min. Always runs; never waits on Apify."""
     while True:
         try:
-            _refresh_cache()
+            with _lock:
+                x_data = dict(_x_cache)
+            results = []
+            for sym in UNIVERSE:
+                posts = fetch_reddit(sym)
+                data  = calc_ticker(sym, posts, x_data.get(sym, []))
+                if data:
+                    results.append(data)
+                time.sleep(2)   # 2s gap — gentler on Reddit to avoid 429s
+
+            if results:
+                sources = ['Reddit']
+                if x_data and any(x_data.values()):
+                    sources.append('X/Twitter')
+                with _lock:
+                    _cache['data'] = {
+                        'stocks':    results,
+                        'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ',
+                                                   time.gmtime()),
+                        'sources':   sources,
+                    }
+                    _cache['ts'] = time.time()
+                print(f'Reddit cache: {len(results)} tickers | {sources}')
+            else:
+                print('Reddit cache: no results this cycle')
         except Exception as e:
-            print(f'Refresh error: {e}')
+            print(f'Reddit loop error: {e}')
         time.sleep(REDDIT_TTL)
 
 
-threading.Thread(target=_schedule_refresh, daemon=True).start()
+def _apify_loop():
+    """Refresh X/Twitter data every 6h via Apify — runs independently."""
+    # Wait 30s on boot so Reddit populates the cache first
+    time.sleep(30)
+    while True:
+        try:
+            fresh = fetch_x_apify()
+            if fresh:
+                with _lock:
+                    _x_cache.update(fresh)
+                print('Apify X cache updated')
+        except Exception as e:
+            print(f'Apify loop error: {e}')
+        time.sleep(X_TTL)
+
+
+threading.Thread(target=_reddit_loop, daemon=True).start()
+if APIFY_TOKEN:
+    threading.Thread(target=_apify_loop, daemon=True).start()
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 @momo_bp.route('/api/momo')
