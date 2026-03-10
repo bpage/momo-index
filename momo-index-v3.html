@@ -40,12 +40,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 /* LAYOUT */
 .grid{display:grid;grid-template-columns:1fr;gap:10px;padding:10px;max-width:960px;margin:0 auto}
 @media(min-width:680px){
-  .grid{grid-template-columns:1fr 270px;grid-template-rows:auto auto auto}
+  .grid{grid-template-columns:1fr 270px;grid-template-rows:auto auto auto auto}
   .panel-score{grid-column:1;grid-row:1}
   .panel-chart{grid-column:1;grid-row:2/4}
   .panel-top10{grid-column:2;grid-row:1/3}
   .panel-stats{grid-column:2;grid-row:3}
-  .panel-feed{grid-column:1/3;grid-row:4}
+  .panel-history-row{grid-column:1/3;grid-row:4}
 }
 
 /* PANELS */
@@ -95,16 +95,27 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .stat-n{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;line-height:1}
 .stat-lbl{font-size:7px;letter-spacing:2px;color:var(--muted);margin-top:3px;text-transform:uppercase}
 
-/* FEED */
-.feed-scroll{max-height:160px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
-.feed-item{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:60px 1fr auto;gap:8px;font-size:10px;align-items:start;cursor:pointer;transition:background .15s;animation:fadeUp .3s ease forwards}
-.feed-item:hover{background:rgba(0,229,255,.04)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.feed-sym{font-family:'Share Tech Mono',monospace;font-weight:600;font-size:12px}
-.feed-text{color:var(--muted);line-height:1.4;font-size:9px}
-.feed-bull{color:var(--green);font-size:8px;letter-spacing:1px}
-.feed-bear{color:var(--red);font-size:8px;letter-spacing:1px}
-.feed-stat{font-size:8px;color:var(--muted2);text-align:right;white-space:nowrap}
+/* STREAKS + MOVERS */
+.history-flex{display:flex;gap:10px}
+@media(max-width:679px){.history-flex{flex-direction:column}}
+.history-half{flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:2px;padding:12px;min-height:100px;max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.history-half-label{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.history-half-label .hl-icon{font-size:11px}
+.streak-item{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--line);font-size:10px;cursor:pointer;transition:background .15s;border-radius:2px}
+.streak-item:hover{background:rgba(0,229,255,.05)}
+.streak-badge{font-size:11px;width:18px;text-align:center;flex-shrink:0}
+.streak-sym{font-family:'Share Tech Mono',monospace;font-weight:600;color:var(--white);font-size:12px;min-width:44px}
+.streak-days{font-size:8px;color:var(--cyan);letter-spacing:1px;background:rgba(0,229,255,.08);padding:1px 5px;border-radius:1px;flex-shrink:0}
+.streak-trend{font-size:11px;min-width:14px;text-align:center;flex-shrink:0}
+.streak-score{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto}
+.mover-item{display:flex;align-items:center;gap:8px;padding:4px;border-bottom:1px solid var(--line);font-size:10px;cursor:pointer;transition:background .15s;border-radius:2px}
+.mover-item:hover{background:rgba(0,229,255,.05)}
+.mover-badge{font-size:10px;min-width:14px;flex-shrink:0}
+.mover-sym{font-family:'Share Tech Mono',monospace;font-weight:600;font-size:11px;min-width:44px}
+.mover-score{font-size:9px;color:var(--muted);margin-left:auto;font-family:'Share Tech Mono',monospace}
+.mover-section-label{font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:8px 0 4px;padding-bottom:3px;border-bottom:1px dashed var(--line)}
+.mover-section-label:first-child{margin-top:0}
+.history-empty{font-size:9px;color:var(--muted2);line-height:1.6;padding:8px 0}
 
 /* ERROR BANNER */
 .error-banner{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:var(--red);font-size:9px;letter-spacing:1px;padding:8px 12px;border-radius:2px;margin-bottom:10px;display:none}
@@ -139,13 +150,17 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
 .modal-tag{font-size:9px;font-weight:700;letter-spacing:2px;padding:3px 8px;border-radius:1px;margin-top:4px;display:inline-block}
 .modal-section{margin:14px 0 6px;font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:4px}
 .modal-tweet{background:var(--bg2);border:1px solid var(--line);border-radius:2px;padding:10px;font-size:11px;line-height:1.6;color:var(--white);font-style:italic}
-.modal-tweet::before{content:'"';color:var(--cyan);font-size:18px;line-height:0;vertical-align:-4px;margin-right:3px}
-.modal-tweet::after{content:'"';color:var(--cyan);font-size:18px;line-height:0;vertical-align:-4px;margin-left:3px}
+.modal-tweet::before{content:'\201C';color:var(--cyan);font-size:18px;line-height:0;vertical-align:-4px;margin-right:3px}
+.modal-tweet::after{content:'\201D';color:var(--cyan);font-size:18px;line-height:0;vertical-align:-4px;margin-left:3px}
 .modal-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .modal-stat{background:var(--bg2);border:1px solid var(--line);border-radius:2px;padding:8px;text-align:center}
 .modal-stat-n{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700}
 .modal-stat-lbl{font-size:7px;color:var(--muted);letter-spacing:1px;margin-top:2px;text-transform:uppercase}
 .modal-why{font-size:9px;color:var(--muted);line-height:1.7;margin-top:8px}
+.modal-hist-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:1px;margin-right:6px}
+.modal-hist-trend{font-size:9px;color:var(--muted);line-height:1.7;margin-top:6px;font-family:'Share Tech Mono',monospace}
+.modal-hist-trend .up{color:var(--green)} .modal-hist-trend .dn{color:var(--red)} .modal-hist-trend .eq{color:var(--amber)}
+.modal-hist-appear{font-size:9px;color:var(--muted);margin-top:4px}
 </style>
 </head>
 <body>
@@ -159,7 +174,7 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
 <!-- DETAIL MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal-box" id="modal-box">
-    <button class="modal-close" onclick="closeModal()">✕</button>
+    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
     <div id="modal-content"></div>
   </div>
 </div>
@@ -176,52 +191,61 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
 
 <div class="grid">
   <div class="panel panel-score">
-    <div class="panel-label">Momentum Index <span id="score-upd">—</span></div>
-    <div class="error-banner" id="err-banner">⚠ BACKEND UNREACHABLE — MORNING SCAN NOT YET RUN</div>
+    <div class="panel-label">Momentum Index <span id="score-upd">&mdash;</span></div>
+    <div class="error-banner" id="err-banner">&#x26A0; BACKEND UNREACHABLE &mdash; MORNING SCAN NOT YET RUN</div>
     <div class="score-wrap">
-      <div class="score-num bull" id="score-num">—</div>
+      <div class="score-num bull" id="score-num">&mdash;</div>
       <div class="score-meta">
         <div class="signal-tag tag-bull" id="signal-tag">SCANNING</div>
         <div class="score-desc" id="score-desc">Connecting to backend...</div>
       </div>
     </div>
     <div class="sent-row">
-      <div class="sent-val-bull" id="bull-pct">—%</div>
+      <div class="sent-val-bull" id="bull-pct">&mdash;%</div>
       <div class="sent-bar">
         <div class="sent-fill-bull" id="bull-bar" style="width:50%"></div>
         <div class="sent-fill-bear" id="bear-bar" style="width:50%"></div>
       </div>
-      <div class="sent-val-bear" id="bear-pct">—%</div>
+      <div class="sent-val-bear" id="bear-pct">&mdash;%</div>
     </div>
   </div>
 
   <div class="panel panel-chart">
-    <div class="panel-label">Index History <span id="chart-chg">—</span></div>
+    <div class="panel-label">Index History <span id="chart-chg">&mdash;</span></div>
     <div class="chart-wrap"><canvas id="momoChart"></canvas></div>
   </div>
 
   <div class="panel panel-top10">
-    <div class="panel-label">Top 10 Momo Stocks <span id="top10-ts">—</span></div>
+    <div class="panel-label">Top 10 Momo Stocks <span id="top10-ts">&mdash;</span></div>
     <div id="top10"></div>
   </div>
 
   <div class="panel panel-stats">
     <div class="panel-label">Market Breadth</div>
     <div class="stats-grid">
-      <div class="stat-box"><div class="stat-n" style="color:var(--green)" id="s-bull">—</div><div class="stat-lbl">Bullish</div></div>
-      <div class="stat-box"><div class="stat-n" style="color:var(--red)" id="s-bear">—</div><div class="stat-lbl">Bearish</div></div>
-      <div class="stat-box"><div class="stat-n" style="color:var(--cyan)" id="s-tickers">—</div><div class="stat-lbl">Tickers Hot</div></div>
-      <div class="stat-box"><div class="stat-n" style="color:var(--amber)" id="s-msgs">—</div><div class="stat-lbl">Total Likes</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--green)" id="s-bull">&mdash;</div><div class="stat-lbl">Bullish</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--red)" id="s-bear">&mdash;</div><div class="stat-lbl">Bearish</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--cyan)" id="s-tickers">&mdash;</div><div class="stat-lbl">Tickers Hot</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--amber)" id="s-msgs">&mdash;</div><div class="stat-lbl">Total Likes</div></div>
     </div>
   </div>
 
-  <div class="panel panel-feed">
-    <div class="panel-label">Live Signal Feed <span class="blink">●</span></div>
-    <div class="feed-scroll" id="feed"></div>
+  <div class="panel panel-history-row">
+    <div class="panel-label">Momo History <span id="history-days">&mdash;</span></div>
+    <div class="history-flex">
+      <div class="history-half" id="streaks-panel">
+        <div class="history-half-label"><span class="hl-icon">&#x1F525;</span> MOMO STREAKS</div>
+        <div id="streaks-list"></div>
+      </div>
+      <div class="history-half" id="movers-panel">
+        <div class="history-half-label"><span class="hl-icon">&#x1F4CA;</span> TODAY'S MOVERS</div>
+        <div id="movers-list"></div>
+      </div>
+    </div>
   </div>
 </div>
 
-<footer><span class="blink">▮</span> X/TWITTER SENTIMENT · AUTO-REFRESH 90s · MOMO INDEX v3.1</footer>
+<footer><span class="blink">&#x25AE;</span> X/TWITTER SENTIMENT &middot; AUTO-REFRESH 90s &middot; MOMO INDEX v4.0</footer>
 
 <script>
 const BACKEND = '';
@@ -229,10 +253,149 @@ const BACKEND = '';
 let chartHistory = {labels:[],scores:[]};
 let momoChart = null;
 let _lastStocks = [];
+let _history = [];
+
+// ── localStorage PERSISTENCE ──────────────────────────
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem('momo_history');
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    // Sort oldest first
+    return arr.sort((a,b) => a.date.localeCompare(b.date));
+  } catch(e) {
+    console.warn('Failed to load momo history:', e);
+    return [];
+  }
+}
+
+function saveScan(stocks, indexScore) {
+  try {
+    const history = loadHistory();
+    const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    // Compact stock data for storage (only what we need for history)
+    const compactStocks = stocks.map(s => ({
+      sym: s.sym,
+      momoScore: s.momoScore,
+      sentiment: s.sentiment,
+      bullPct: s.bullPct,
+      totalTweets: s.totalTweets,
+      totalLikes: s.totalLikes
+    }));
+    // Update or add today's entry
+    const existing = history.findIndex(h => h.date === today);
+    const entry = { date: today, indexScore, stocks: compactStocks };
+    if (existing >= 0) {
+      history[existing] = entry;
+    } else {
+      history.push(entry);
+    }
+    // Keep only last 30 days
+    while (history.length > 30) history.shift();
+    localStorage.setItem('momo_history', JSON.stringify(history));
+    return history;
+  } catch(e) {
+    console.warn('Failed to save scan:', e);
+    return loadHistory();
+  }
+}
+
+function computeStreaks(history, todayStocks) {
+  const todaySyms = new Set(todayStocks.map(s => s.sym));
+  const todayMap = {};
+  todayStocks.forEach(s => { todayMap[s.sym] = s; });
+
+  // Get yesterday's stocks (most recent day before today)
+  const yesterdayEntry = history.length >= 2 ? history[history.length - 2] : null;
+  const yesterdaySyms = yesterdayEntry ? new Set(yesterdayEntry.stocks.map(s => s.sym)) : new Set();
+  const yesterdayMap = {};
+  if (yesterdayEntry) yesterdayEntry.stocks.forEach(s => { yesterdayMap[s.sym] = s; });
+
+  // Count consecutive days for each of today's tickers (walking backwards)
+  const streaks = [];
+  todaySyms.forEach(sym => {
+    let days = 1; // Today counts as 1
+    // Walk backwards from second-to-last entry
+    for (let i = history.length - 2; i >= 0; i--) {
+      const daySyms = new Set(history[i].stocks.map(s => s.sym));
+      if (daySyms.has(sym)) {
+        days++;
+      } else {
+        break; // Streak broken
+      }
+    }
+    // Compute trend vs yesterday
+    let trend = ''; // no data
+    if (yesterdayMap[sym]) {
+      const diff = (todayMap[sym]?.momoScore || 0) - (yesterdayMap[sym]?.momoScore || 0);
+      if (diff > 5) trend = 'up';
+      else if (diff < -5) trend = 'dn';
+      else trend = 'eq';
+    }
+    if (days >= 2) {
+      streaks.push({
+        sym,
+        days,
+        trend,
+        score: todayMap[sym]?.momoScore || 0,
+        stock: todayMap[sym]
+      });
+    }
+  });
+  // Sort by streak length desc, then momoScore desc
+  streaks.sort((a,b) => b.days - a.days || b.score - a.score);
+
+  // New today: in today but not yesterday
+  const newToday = [];
+  todaySyms.forEach(sym => {
+    if (!yesterdaySyms.has(sym)) {
+      newToday.push({ sym, score: todayMap[sym]?.momoScore || 0, stock: todayMap[sym] });
+    }
+  });
+  newToday.sort((a,b) => b.score - a.score);
+
+  // Dropped off: in yesterday but not today
+  const droppedOff = [];
+  yesterdaySyms.forEach(sym => {
+    if (!todaySyms.has(sym)) {
+      droppedOff.push({ sym, score: yesterdayMap[sym]?.momoScore || 0 });
+    }
+  });
+  droppedOff.sort((a,b) => b.score - a.score);
+
+  return { streaks, newToday, droppedOff };
+}
+
+function getTickerHistory(history, sym) {
+  const result = [];
+  history.forEach(day => {
+    const stock = day.stocks.find(s => s.sym === sym);
+    if (stock) {
+      result.push({ date: day.date, momoScore: stock.momoScore, sentiment: stock.sentiment });
+    }
+  });
+  return result;
+}
+
+function getTickerStreak(history, sym) {
+  let days = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].stocks.some(s => s.sym === sym)) {
+      days++;
+    } else {
+      break;
+    }
+  }
+  return days;
+}
+
+function countAppearances(history, sym) {
+  return history.filter(day => day.stocks.some(s => s.sym === sym)).length;
+}
 
 // ── SIGNAL ────────────────────────────────────────────
 function getSignal(score) {
-  if (score>=74) return {label:'STRONG BULL',cls:'bull',desc:'Maximum momo — market is ripping. High conviction longs.'};
+  if (score>=74) return {label:'STRONG BULL',cls:'bull',desc:'Maximum momo \u2014 market is ripping. High conviction longs.'};
   if (score>=60) return {label:'BULL TREND', cls:'bull',desc:'Broad bullish sentiment. Momentum building.'};
   if (score>=46) return {label:'NEUTRAL',    cls:'flat',desc:'Mixed signals. Wait for directional confirmation.'};
   if (score>=32) return {label:'BEAR TREND', cls:'bear',desc:'Negative sentiment dominating. Reduce exposure.'};
@@ -255,50 +418,93 @@ function openModal(s) {
 
   // Build a human-readable "why" explanation
   const reasons = [];
-  if (s.totalTweets >= 5)  reasons.push(`High mention frequency (${s.totalTweets} posts)`);
-  if (s.totalLikes >= 100) reasons.push(`Strong engagement (${s.totalLikes} likes)`);
-  if (bp >= 80)            reasons.push(`Heavily bullish sentiment (${bp}% bull)`);
-  if (s.momoScore >= 80)   reasons.push(`Top-tier momentum score`);
-  if (s.totalTweets >= 3 && s.totalLikes >= 50) reasons.push(`Consistent signal across multiple traders`);
-  if (reasons.length === 0) reasons.push(`Organic discovery via X keyword scan`);
+  if (s.totalTweets >= 5)  reasons.push('High mention frequency (' + s.totalTweets + ' posts)');
+  if (s.totalLikes >= 100) reasons.push('Strong engagement (' + s.totalLikes + ' likes)');
+  if (bp >= 80)            reasons.push('Heavily bullish sentiment (' + bp + '% bull)');
+  if (s.momoScore >= 80)   reasons.push('Top-tier momentum score');
+  if (s.totalTweets >= 3 && s.totalLikes >= 50) reasons.push('Consistent signal across multiple traders');
+  if (reasons.length === 0) reasons.push('Organic discovery via X keyword scan');
 
-  document.getElementById('modal-content').innerHTML = `
-    <div class="modal-header">
-      <div class="modal-sym">$${s.sym}</div>
-      <div class="modal-name">${s.name||s.sym}</div>
-    </div>
-    <div class="modal-score-row">
-      <div class="modal-score-big" style="color:${col}">${s.momoScore}</div>
-      <div class="modal-score-bar-wrap">
-        <div style="font-size:8px;color:var(--muted);letter-spacing:1px">MOMO SCORE</div>
-        <div class="modal-score-bar">
-          <div class="modal-score-bar-fill" style="width:${s.momoScore}%;background:${col}"></div>
-        </div>
-        <div class="modal-tag ${tagCls}">${sentLabel}</div>
-      </div>
-    </div>
+  // History context
+  const tickerHist = getTickerHistory(_history, s.sym);
+  const streak = getTickerStreak(_history, s.sym);
+  const appearances = countAppearances(_history, s.sym);
+  const totalDays = _history.length;
 
-    <div class="modal-stats-row">
-      <div class="modal-stat">
-        <div class="modal-stat-n" style="color:var(--cyan)">${s.totalTweets||0}</div>
-        <div class="modal-stat-lbl">Posts</div>
-      </div>
-      <div class="modal-stat">
-        <div class="modal-stat-n" style="color:var(--amber)">${s.totalLikes||0}</div>
-        <div class="modal-stat-lbl">Likes</div>
-      </div>
-      <div class="modal-stat">
-        <div class="modal-stat-n" style="color:${col}">${bp}%</div>
-        <div class="modal-stat-lbl">Bull %</div>
-      </div>
-    </div>
+  let historyHTML = '';
+  if (totalDays > 0) {
+    // Streak / new badge
+    let badge = '';
+    if (streak >= 3) {
+      badge = '<span class="modal-hist-badge" style="background:rgba(255,171,0,.15);color:var(--amber);border:1px solid rgba(255,171,0,.3)">&#x1F525; ' + streak + '-DAY STREAK</span>';
+    } else if (streak === 2) {
+      badge = '<span class="modal-hist-badge" style="background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.3)">&#x1F4C8; 2-DAY REPEAT</span>';
+    } else if (streak <= 1 && totalDays >= 2) {
+      badge = '<span class="modal-hist-badge" style="background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.3)">&#x1F195; NEW TODAY</span>';
+    }
 
-    <div class="modal-section">Why it has momo today</div>
-    <div class="modal-tweet">${tweetText}</div>
-    <div class="modal-why">
-      ${reasons.map(r=>`▸ ${r}`).join('<br>')}
-    </div>
-  `;
+    // Score trend line
+    let trendLine = '';
+    if (tickerHist.length > 1) {
+      const recent = tickerHist.slice(-5); // Last 5 appearances
+      trendLine = '<div class="modal-hist-trend">' + recent.map((h, i) => {
+        const d = new Date(h.date + 'T00:00:00');
+        const label = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+        let cls = 'eq';
+        if (i > 0) {
+          const prev = recent[i-1].momoScore;
+          if (h.momoScore > prev + 3) cls = 'up';
+          else if (h.momoScore < prev - 3) cls = 'dn';
+        }
+        return '<span class="' + cls + '">' + label + ': ' + h.momoScore + '</span>';
+      }).join(' &#x2192; ') + '</div>';
+    }
+
+    historyHTML = '<div class="modal-section">History</div>' +
+      badge +
+      '<div class="modal-hist-appear">Appeared ' + appearances + ' of last ' + totalDays + ' day' + (totalDays!==1?'s':'') + '</div>' +
+      trendLine;
+  }
+
+  document.getElementById('modal-content').innerHTML =
+    '<div class="modal-header">' +
+      '<div class="modal-sym">$' + s.sym + '</div>' +
+      '<div class="modal-name">' + (s.name||s.sym) + '</div>' +
+    '</div>' +
+    '<div class="modal-score-row">' +
+      '<div class="modal-score-big" style="color:' + col + '">' + s.momoScore + '</div>' +
+      '<div class="modal-score-bar-wrap">' +
+        '<div style="font-size:8px;color:var(--muted);letter-spacing:1px">MOMO SCORE</div>' +
+        '<div class="modal-score-bar">' +
+          '<div class="modal-score-bar-fill" style="width:' + s.momoScore + '%;background:' + col + '"></div>' +
+        '</div>' +
+        '<div class="modal-tag ' + tagCls + '">' + sentLabel + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="modal-stats-row">' +
+      '<div class="modal-stat">' +
+        '<div class="modal-stat-n" style="color:var(--cyan)">' + (s.totalTweets||0) + '</div>' +
+        '<div class="modal-stat-lbl">Posts</div>' +
+      '</div>' +
+      '<div class="modal-stat">' +
+        '<div class="modal-stat-n" style="color:var(--amber)">' + (s.totalLikes||0) + '</div>' +
+        '<div class="modal-stat-lbl">Likes</div>' +
+      '</div>' +
+      '<div class="modal-stat">' +
+        '<div class="modal-stat-n" style="color:' + col + '">' + bp + '%</div>' +
+        '<div class="modal-stat-lbl">Bull %</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="modal-section">Why it has momo today</div>' +
+    '<div class="modal-tweet">' + tweetText + '</div>' +
+    '<div class="modal-why">' +
+      reasons.map(function(r){ return '&#x25B8; ' + r; }).join('<br>') +
+    '</div>' +
+
+    historyHTML;
+
   document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -306,21 +512,20 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
 }
 
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+document.addEventListener('keydown', function(e) { if(e.key==='Escape') closeModal(); });
 
 // ── RENDERS ───────────────────────────────────────────
 function renderScore(stocks) {
   const score = calcIndex(stocks);
   const sig = getSignal(score);
   document.getElementById('score-num').textContent = score;
-  document.getElementById('score-num').className = `score-num ${sig.cls}`;
+  document.getElementById('score-num').className = 'score-num ' + sig.cls;
   document.getElementById('signal-tag').textContent = sig.label;
-  document.getElementById('signal-tag').className = `signal-tag tag-${sig.cls}`;
+  document.getElementById('signal-tag').className = 'signal-tag tag-' + sig.cls;
   document.getElementById('score-desc').textContent = sig.desc;
   document.getElementById('score-upd').textContent = new Date().toLocaleTimeString();
 
-  // Use bullPct from each stock (average) for the sentiment bar
-  const avgBull = Math.round(stocks.reduce((s,d)=>s+(d.bullPct!=null?d.bullPct:50),0) / (stocks.length||1));
+  const avgBull = Math.round(stocks.reduce(function(s,d){return s+(d.bullPct!=null?d.bullPct:50);},0) / (stocks.length||1));
   document.getElementById('bull-pct').textContent = avgBull+'%';
   document.getElementById('bear-pct').textContent = (100-avgBull)+'%';
   document.getElementById('bull-bar').style.width = avgBull+'%';
@@ -329,111 +534,218 @@ function renderScore(stocks) {
 }
 
 function renderTop10(stocks) {
-  const top10 = [...stocks].sort((a,b)=>b.momoScore-a.momoScore).slice(0,10);
-  const el = document.getElementById('top10'); el.innerHTML='';
-  top10.forEach((s,i)=>{
-    const isBull = (s.bullPct!=null?s.bullPct:50) >= 50;
-    const col = isBull ? 'var(--green)' : 'var(--red)';
-    const bp = s.bullPct!=null ? s.bullPct : 50;
-    const row = document.createElement('div');
+  var top10 = stocks.slice().sort(function(a,b){return b.momoScore-a.momoScore}).slice(0,10);
+  var el = document.getElementById('top10'); el.innerHTML='';
+  top10.forEach(function(s,i){
+    var isBull = (s.bullPct!=null?s.bullPct:50) >= 50;
+    var col = isBull ? 'var(--green)' : 'var(--red)';
+    var bp = s.bullPct!=null ? s.bullPct : 50;
+    var row = document.createElement('div');
     row.className = 'stock-item';
     row.style.animationDelay = (i*.05)+'s';
     row.title = 'Click to see why';
-    row.innerHTML = `
-      <div class="s-rank">#${i+1}</div>
-      <div>
-        <div class="s-sym">${s.sym}</div>
-        <div class="s-name">${s.name||s.sym}</div>
-        <div class="s-hint">${s.totalTweets||0} posts · ${s.totalLikes||0} likes</div>
-      </div>
-      <div>
-        <div class="s-chg" style="color:${col}">${bp}%<br><span style="font-size:7px;color:var(--muted)">${(s.sentiment||'neutral').toUpperCase()}</span></div>
-      </div>
-      <div class="s-score-wrap">
-        <div class="s-bar"><div class="s-bar-fill" style="width:${s.momoScore}%;background:${col}"></div></div>
-        <div class="s-momo">MOM ${s.momoScore}</div>
-      </div>`;
-    row.addEventListener('click', ()=>openModal(s));
+    row.innerHTML =
+      '<div class="s-rank">#' + (i+1) + '</div>' +
+      '<div>' +
+        '<div class="s-sym">' + s.sym + '</div>' +
+        '<div class="s-name">' + (s.name||s.sym) + '</div>' +
+        '<div class="s-hint">' + (s.totalTweets||0) + ' posts \u00B7 ' + (s.totalLikes||0) + ' likes</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="s-chg" style="color:' + col + '">' + bp + '%<br><span style="font-size:7px;color:var(--muted)">' + (s.sentiment||'neutral').toUpperCase() + '</span></div>' +
+      '</div>' +
+      '<div class="s-score-wrap">' +
+        '<div class="s-bar"><div class="s-bar-fill" style="width:' + s.momoScore + '%;background:' + col + '"></div></div>' +
+        '<div class="s-momo">MOM ' + s.momoScore + '</div>' +
+      '</div>';
+    row.addEventListener('click', (function(stock){ return function(){ openModal(stock); }; })(s));
     el.appendChild(row);
   });
   document.getElementById('top10-ts').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 }
 
 function renderStats(stocks) {
-  // Count by actual sentiment field
-  const bull  = stocks.filter(s=>s.sentiment==='bullish').length;
-  const bear  = stocks.filter(s=>s.sentiment==='bearish').length;
-  const hot   = stocks.filter(s=>s.momoScore>55).length;
-  const likes = stocks.reduce((sum,s)=>sum+(s.totalLikes||0),0);
+  var bull  = stocks.filter(function(s){return s.sentiment==='bullish'}).length;
+  var bear  = stocks.filter(function(s){return s.sentiment==='bearish'}).length;
+  var hot   = stocks.filter(function(s){return s.momoScore>55}).length;
+  var likes = stocks.reduce(function(sum,s){return sum+(s.totalLikes||0)},0);
   document.getElementById('s-bull').textContent    = bull;
   document.getElementById('s-bear').textContent    = bear;
   document.getElementById('s-tickers').textContent = hot;
   document.getElementById('s-msgs').textContent    = likes >= 1000 ? (likes/1000).toFixed(1)+'K' : likes;
 }
 
-function renderFeed(stocks) {
-  const sorted = [...stocks].sort((a,b)=>b.momoScore-a.momoScore);
-  const el = document.getElementById('feed'); el.innerHTML='';
-  sorted.forEach(s=>{
-    if (!s.topTweet) return;
-    const isBull = s.sentiment === 'bullish';
-    const item = document.createElement('div');
-    item.className = 'feed-item';
-    item.innerHTML = `
-      <div>
-        <div class="feed-sym" style="color:${isBull?'var(--green)':'var(--red)'}">\$${s.sym}</div>
-        <div class="${isBull?'feed-bull':'feed-bear'}">${isBull?'▲ BULL':'▼ BEAR'}</div>
-        <div class="feed-stat">${s.totalLikes||0}♥</div>
-      </div>
-      <div class="feed-text">${(s.topTweet||'').slice(0,100)}</div>
-      <div class="feed-stat">${s.totalTweets||0} posts</div>`;
-    item.addEventListener('click', ()=>openModal(s));
+function renderStreaks(stocks, history) {
+  var data = computeStreaks(history, stocks);
+  var el = document.getElementById('streaks-list');
+  el.innerHTML = '';
+
+  // Show day count
+  document.getElementById('history-days').textContent = history.length + ' day' + (history.length!==1?'s':'') + ' tracked';
+
+  if (history.length < 2) {
+    el.innerHTML = '<div class="history-empty">Streaks build over multiple scans.<br>Run again tomorrow to see which tickers have real momentum vs. one-day noise.</div>';
+    return;
+  }
+
+  if (data.streaks.length === 0) {
+    el.innerHTML = '<div class="history-empty">No multi-day streaks today.<br>All tickers are new or returning after a gap.</div>';
+    return;
+  }
+
+  data.streaks.forEach(function(s) {
+    var badge = s.days >= 3 ? '&#x1F525;' : '&#x1F4C8;';
+    var trendIcon = '';
+    if (s.trend === 'up') trendIcon = '<span style="color:var(--green)">&#x2191;</span>';
+    else if (s.trend === 'dn') trendIcon = '<span style="color:var(--red)">&#x2193;</span>';
+    else if (s.trend === 'eq') trendIcon = '<span style="color:var(--amber)">&#x2192;</span>';
+
+    var item = document.createElement('div');
+    item.className = 'streak-item';
+    item.innerHTML =
+      '<div class="streak-badge">' + badge + '</div>' +
+      '<div class="streak-sym">' + s.sym + '</div>' +
+      '<div class="streak-days">' + s.days + 'd</div>' +
+      '<div class="streak-trend">' + trendIcon + '</div>' +
+      '<div class="streak-score">MOM ' + s.score + '</div>';
+    if (s.stock) {
+      item.addEventListener('click', (function(stock){ return function(){ openModal(stock); }; })(s.stock));
+    }
     el.appendChild(item);
   });
 }
 
-function renderTicker(stocks) {
-  const sorted=[...stocks].sort((a,b)=>b.momoScore-a.momoScore);
-  const html=[...sorted,...sorted].map(s=>`
-    <div class="t-item">
-      <span class="t-sym">\$${s.sym}</span>
-      <span class="${(s.bullPct||50)>=50?'t-bull':'t-bear'}">${s.bullPct||50}% ${(s.bullPct||50)>=50?'▲':'▼'}</span>
-    </div>`).join('');
-  document.getElementById('ticker').innerHTML=html;
+function renderMovers(stocks, history) {
+  var data = computeStreaks(history, stocks);
+  var el = document.getElementById('movers-list');
+  el.innerHTML = '';
+
+  if (history.length < 2) {
+    el.innerHTML = '<div class="history-empty">Need at least 2 days of data to show movers.<br>All current tickers will appear as NEW after the next scan.</div>';
+    return;
+  }
+
+  // Lookup today's stocks for click handling
+  var todayMap = {};
+  stocks.forEach(function(s) { todayMap[s.sym] = s; });
+
+  // New section
+  if (data.newToday.length > 0) {
+    var newLabel = document.createElement('div');
+    newLabel.className = 'mover-section-label';
+    newLabel.textContent = '&#x1F195; NEW TODAY (' + data.newToday.length + ')';
+    newLabel.innerHTML = '&#x1F195; NEW TODAY (' + data.newToday.length + ')';
+    el.appendChild(newLabel);
+
+    data.newToday.forEach(function(m) {
+      var item = document.createElement('div');
+      item.className = 'mover-item';
+      item.innerHTML =
+        '<div class="mover-badge" style="color:var(--green)">&#x25B2;</div>' +
+        '<div class="mover-sym" style="color:var(--green)">' + m.sym + '</div>' +
+        '<div class="mover-score">MOM ' + m.score + '</div>';
+      if (m.stock) {
+        item.addEventListener('click', (function(stock){ return function(){ openModal(stock); }; })(m.stock));
+      }
+      el.appendChild(item);
+    });
+  }
+
+  // Dropped section
+  if (data.droppedOff.length > 0) {
+    var dropLabel = document.createElement('div');
+    dropLabel.className = 'mover-section-label';
+    dropLabel.innerHTML = '&#x274C; DROPPED OFF (' + data.droppedOff.length + ')';
+    el.appendChild(dropLabel);
+
+    data.droppedOff.forEach(function(m) {
+      var item = document.createElement('div');
+      item.className = 'mover-item';
+      item.innerHTML =
+        '<div class="mover-badge" style="color:var(--red)">&#x25BC;</div>' +
+        '<div class="mover-sym" style="color:var(--muted)">' + m.sym + '</div>' +
+        '<div class="mover-score" style="color:var(--red)">was ' + m.score + '</div>';
+      el.appendChild(item);
+    });
+  }
+
+  if (data.newToday.length === 0 && data.droppedOff.length === 0) {
+    el.innerHTML = '<div class="history-empty">No changes from yesterday. Same tickers in play.</div>';
+  }
 }
 
-// ── CHART ─────────────────────────────────────────────
+function renderTicker(stocks) {
+  var sorted = stocks.slice().sort(function(a,b){return b.momoScore-a.momoScore});
+  var html = sorted.concat(sorted).map(function(s){
+    return '<div class="t-item">' +
+      '<span class="t-sym">$' + s.sym + '</span>' +
+      '<span class="' + ((s.bullPct||50)>=50?'t-bull':'t-bear') + '">' + (s.bullPct||50) + '% ' + ((s.bullPct||50)>=50?'&#x25B2;':'&#x25BC;') + '</span>' +
+    '</div>';
+  }).join('');
+  document.getElementById('ticker').innerHTML = html;
+}
+
+// ── CHART (Daily History) ─────────────────────────────
 function initChart() {
-  const ctx=document.getElementById('momoChart').getContext('2d');
-  momoChart=new Chart(ctx,{
+  var ctx = document.getElementById('momoChart').getContext('2d');
+  momoChart = new Chart(ctx, {
     type:'line',
     data:{labels:[],datasets:[{label:'MOMO',data:[],borderColor:'#00e5ff',
-      backgroundColor:c=>{const g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(0,229,255,.15)');g.addColorStop(1,'rgba(0,229,255,0)');return g},
-      tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#00e5ff',borderWidth:2}]},
+      backgroundColor:function(c){var g=c.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(0,229,255,.15)');g.addColorStop(1,'rgba(0,229,255,0)');return g},
+      tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#00e5ff',pointHoverRadius:6,borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:800},
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#0a1520',borderColor:'#1a2e42',borderWidth:1,
         titleColor:'#2a4a63',bodyColor:'#e8f4f8',titleFont:{family:'IBM Plex Mono',size:9},bodyFont:{family:'Orbitron',size:14,weight:'bold'}}},
       scales:{
-        x:{ticks:{color:'#1a3347',font:{family:'Share Tech Mono',size:8},maxTicksLimit:6},grid:{color:'rgba(19,34,51,.8)'}},
+        x:{ticks:{color:'#1a3347',font:{family:'Share Tech Mono',size:8},maxTicksLimit:8},grid:{color:'rgba(19,34,51,.8)'}},
         y:{min:0,max:100,ticks:{color:'#1a3347',font:{family:'Share Tech Mono',size:8}},grid:{color:'rgba(19,34,51,.8)'}}
       }}
   });
 }
 
-function updateChart(score) {
-  const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  chartHistory.labels.push(now); chartHistory.scores.push(score);
-  if(chartHistory.labels.length>40){chartHistory.labels.shift();chartHistory.scores.shift()}
-  momoChart.data.labels=chartHistory.labels;
-  momoChart.data.datasets[0].data=chartHistory.scores;
-  const up=score>=(chartHistory.scores[0]||50);
-  momoChart.data.datasets[0].borderColor=up?'#00e676':'#ff1744';
-  momoChart.data.datasets[0].pointBackgroundColor=up?'#00e676':'#ff1744';
+function updateChartFromHistory(history, todayScore) {
+  // Build chart data from daily history
+  var labels = [];
+  var scores = [];
+
+  history.forEach(function(day) {
+    var d = new Date(day.date + 'T00:00:00');
+    labels.push(d.toLocaleDateString('en-US', {month:'short', day:'numeric'}));
+    scores.push(day.indexScore);
+  });
+
+  // If today's entry is already in history (updated by saveScan), it's included
+  // Otherwise add it
+  var today = new Date().toISOString().slice(0,10);
+  var lastDate = history.length > 0 ? history[history.length-1].date : '';
+  if (lastDate !== today && todayScore != null) {
+    var td = new Date(today + 'T00:00:00');
+    labels.push(td.toLocaleDateString('en-US', {month:'short', day:'numeric'}));
+    scores.push(todayScore);
+  }
+
+  momoChart.data.labels = labels;
+  momoChart.data.datasets[0].data = scores;
+
+  // Color: green if today >= yesterday, red if lower
+  var up = true;
+  if (scores.length >= 2) {
+    up = scores[scores.length-1] >= scores[scores.length-2];
+  }
+  momoChart.data.datasets[0].borderColor = up ? '#00e676' : '#ff1744';
+  momoChart.data.datasets[0].pointBackgroundColor = up ? '#00e676' : '#ff1744';
   momoChart.update('active');
-  const delta=score-(chartHistory.scores[0]||score);
-  const el=document.getElementById('chart-chg');
-  el.textContent=(delta>=0?'+':'')+delta.toFixed(1)+' pts';
-  el.style.color=delta>=0?'var(--green)':'var(--red)';
+
+  // Delta display
+  var el = document.getElementById('chart-chg');
+  if (scores.length >= 2) {
+    var delta = scores[scores.length-1] - scores[scores.length-2];
+    el.textContent = (delta>=0?'+':'') + delta.toFixed(1) + ' pts';
+    el.style.color = delta>=0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    el.textContent = '\u2014';
+    el.style.color = 'var(--muted)';
+  }
 }
 
 // ── LOADER ────────────────────────────────────────────
@@ -442,19 +754,19 @@ function setLoader(pct,msg){
   document.getElementById('lmsg').textContent=msg;
 }
 function hideLoader(){
-  const l=document.getElementById('loader');
+  var l=document.getElementById('loader');
   l.style.opacity='0';
-  setTimeout(()=>l.style.display='none',600);
+  setTimeout(function(){l.style.display='none'},600);
 }
 
 // ── CLOCK ─────────────────────────────────────────────
 function updateClock(){
-  const now=new Date();
+  var now=new Date();
   document.getElementById('clock').textContent=now.toLocaleTimeString('en-US',{hour12:false});
-  const h=now.getHours(),m=now.getMinutes(),d=now.getDay(),mins=h*60+m;
-  let s;
-  if(d===0||d===6) s='WEEKEND · CLOSED';
-  else if(mins>=570&&mins<960) s='NYSE OPEN · LIVE';
+  var h=now.getHours(),m=now.getMinutes(),d=now.getDay(),mins=h*60+m;
+  var s;
+  if(d===0||d===6) s='WEEKEND \u00B7 CLOSED';
+  else if(mins>=570&&mins<960) s='NYSE OPEN \u00B7 LIVE';
   else if(mins>=240&&mins<570) s='PRE-MARKET';
   else if(mins>=960&&mins<1200) s='AFTER-HOURS';
   else s='MARKET CLOSED';
@@ -465,43 +777,52 @@ setInterval(updateClock,1000); updateClock();
 // ── MAIN REFRESH ──────────────────────────────────────
 async function refresh() {
   try {
-    const res = await fetch(`${BACKEND}/api/momo`);
+    var res = await fetch(BACKEND + '/api/momo');
     if (!res.ok) throw new Error('bad response');
-    const json = await res.json();
-    const stocks = json.stocks || [];
+    var json = await res.json();
+    var stocks = json.stocks || [];
 
     setLoader(80,'CALCULATING MOMO SCORES...');
     document.getElementById('err-banner').style.display='none';
     _lastStocks = stocks;
 
-    const score = renderScore(stocks);
+    var score = renderScore(stocks);
     renderTop10(stocks);
     renderStats(stocks);
-    renderFeed(stocks);
     renderTicker(stocks);
-    updateChart(score);
+
+    // Save to localStorage and update history-based panels
+    _history = saveScan(stocks, score);
+    updateChartFromHistory(_history, score);
+    renderStreaks(stocks, _history);
+    renderMovers(stocks, _history);
 
   } catch(e) {
     console.error('Backend error:', e);
     document.getElementById('err-banner').style.display='block';
     document.getElementById('score-desc').textContent = 'Morning scan not yet run, or backend unavailable.';
+
+    // Still load chart from history even if backend is down
+    _history = loadHistory();
+    if (_history.length > 0) {
+      updateChartFromHistory(_history, null);
+    }
   }
 
   setLoader(100,'LIVE');
   hideLoader();
 }
 
-// ── SEED CHART ────────────────────────────────────────
-for(let i=10;i>=1;i--){
-  const t=new Date(Date.now()-i*90000);
-  chartHistory.labels.push(t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
-  chartHistory.scores.push(44+Math.round(Math.random()*18));
-}
-
+// ── INIT ──────────────────────────────────────────────
+_history = loadHistory();
 initChart();
+// Load any existing history into the chart on startup
+if (_history.length > 0) {
+  updateChartFromHistory(_history, null);
+}
 setLoader(20,'FETCHING X/TWITTER DATA...');
 refresh();
-setInterval(refresh,90000);
+setInterval(refresh, 90000);
 </script>
 </body>
 </html>
