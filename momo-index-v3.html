@@ -43,7 +43,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
   .grid{grid-template-columns:1fr 270px;grid-template-rows:auto auto auto}
   .panel-score{grid-column:1;grid-row:1}
   .panel-chart{grid-column:1;grid-row:2/4}
-  .panel-top5{grid-column:2;grid-row:1/3}
+  .panel-top10{grid-column:2;grid-row:1/3}
   .panel-stats{grid-column:2;grid-row:3}
   .panel-feed{grid-column:1/3;grid-row:4}
 }
@@ -75,21 +75,19 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 /* CHART */
 .chart-wrap{height:220px}
 
-/* TOP 5 */
-.stock-item{padding:10px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:20px 1fr auto;gap:8px;align-items:start;opacity:0;animation:slideIn .4s ease forwards}
+/* TOP 10 */
+.stock-item{padding:6px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:18px 1fr auto;gap:6px;align-items:start;cursor:pointer;transition:background .15s;border-radius:2px;opacity:0;animation:slideIn .4s ease forwards}
+.stock-item:hover{background:rgba(0,229,255,.05);padding-left:4px;padding-right:4px}
 @keyframes slideIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
-.s-rank{font-size:9px;color:var(--muted);padding-top:2px}
-.s-sym{font-size:14px;font-weight:600;color:var(--white);font-family:'Share Tech Mono',monospace}
-.s-name{font-size:8px;color:var(--muted);margin-top:1px}
-.s-chg{font-size:12px;font-weight:600;text-align:right;font-family:'Share Tech Mono',monospace}
-.s-score-wrap{grid-column:2/4;display:flex;align-items:center;gap:6px;margin-top:4px}
-.s-bar{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.s-rank{font-size:8px;color:var(--muted);padding-top:2px}
+.s-sym{font-size:13px;font-weight:600;color:var(--white);font-family:'Share Tech Mono',monospace}
+.s-name{font-size:7px;color:var(--muted);margin-top:1px}
+.s-chg{font-size:11px;font-weight:600;text-align:right;font-family:'Share Tech Mono',monospace}
+.s-score-wrap{grid-column:2/4;display:flex;align-items:center;gap:6px;margin-top:3px}
+.s-bar{flex:1;height:2px;background:var(--bg3);border-radius:2px;overflow:hidden}
 .s-bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
 .s-momo{font-size:8px;color:var(--muted);white-space:nowrap}
-.s-sent{display:flex;gap:4px;margin-top:3px}
-.sent-pill{font-size:7px;padding:1px 5px;border-radius:1px;letter-spacing:1px}
-.sp-bull{background:rgba(0,230,118,.1);color:var(--green)}
-.sp-bear{background:rgba(255,23,68,.1);color:var(--red)}
+.s-hint{font-size:7px;color:var(--muted2);letter-spacing:1px;margin-top:1px}
 
 /* STATS */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
@@ -99,13 +97,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 
 /* FEED */
 .feed-scroll{max-height:160px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
-.feed-item{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:60px 1fr auto;gap:8px;font-size:10px;align-items:start;animation:fadeUp .3s ease forwards}
+.feed-item{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:60px 1fr auto;gap:8px;font-size:10px;align-items:start;cursor:pointer;transition:background .15s;animation:fadeUp .3s ease forwards}
+.feed-item:hover{background:rgba(0,229,255,.04)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .feed-sym{font-family:'Share Tech Mono',monospace;font-weight:600;font-size:12px}
 .feed-text{color:var(--muted);line-height:1.4;font-size:9px}
 .feed-bull{color:var(--green);font-size:8px;letter-spacing:1px}
 .feed-bear{color:var(--red);font-size:8px;letter-spacing:1px}
-.feed-time{font-size:8px;color:var(--muted2)}
+.feed-stat{font-size:8px;color:var(--muted2);text-align:right;white-space:nowrap}
 
 /* ERROR BANNER */
 .error-banner{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:var(--red);font-size:9px;letter-spacing:1px;padding:8px 12px;border-radius:2px;margin-bottom:10px;display:none}
@@ -120,6 +119,33 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
 .loader-bar-wrap{width:200px;height:2px;background:var(--bg3);border-radius:1px;overflow:hidden}
 .loader-bar{height:100%;background:var(--cyan);width:0%;transition:width .2s;box-shadow:var(--glow-c)}
 .loader-msg{font-size:9px;color:var(--muted);letter-spacing:2px}
+
+/* DETAIL MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(3,8,13,.88);z-index:6000;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg1);border:1px solid var(--line2);border-radius:3px;padding:20px;max-width:460px;width:100%;position:relative;max-height:85vh;overflow-y:auto;animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--green),transparent)}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:0}
+.modal-close:hover{color:var(--white)}
+.modal-header{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.modal-sym{font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;color:var(--white)}
+.modal-name{font-size:10px;color:var(--muted);letter-spacing:1px}
+.modal-score-row{display:flex;align-items:center;gap:12px;margin:10px 0}
+.modal-score-big{font-family:'Orbitron',sans-serif;font-size:40px;font-weight:900}
+.modal-score-bar-wrap{flex:1}
+.modal-score-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px}
+.modal-score-bar-fill{height:100%;border-radius:2px}
+.modal-tag{font-size:9px;font-weight:700;letter-spacing:2px;padding:3px 8px;border-radius:1px;margin-top:4px;display:inline-block}
+.modal-section{margin:14px 0 6px;font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:4px}
+.modal-tweet{background:var(--bg2);border:1px solid var(--line);border-radius:2px;padding:10px;font-size:11px;line-height:1.6;color:var(--white);font-style:italic}
+.modal-tweet::before{content:'"';color:var(--cyan);font-size:18px;line-height:0;vertical-align:-4px;margin-right:3px}
+.modal-tweet::after{content:'"';color:var(--cyan);font-size:18px;line-height:0;vertical-align:-4px;margin-left:3px}
+.modal-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.modal-stat{background:var(--bg2);border:1px solid var(--line);border-radius:2px;padding:8px;text-align:center}
+.modal-stat-n{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700}
+.modal-stat-lbl{font-size:7px;color:var(--muted);letter-spacing:1px;margin-top:2px;text-transform:uppercase}
+.modal-why{font-size:9px;color:var(--muted);line-height:1.7;margin-top:8px}
 </style>
 </head>
 <body>
@@ -128,6 +154,14 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
   <div class="loader-logo">MOMO<em style="color:var(--green)">IDX</em></div>
   <div class="loader-bar-wrap"><div class="loader-bar" id="lbar"></div></div>
   <div class="loader-msg" id="lmsg">CONNECTING...</div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
 </div>
 
 <header>
@@ -143,7 +177,7 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
 <div class="grid">
   <div class="panel panel-score">
     <div class="panel-label">Momentum Index <span id="score-upd">—</span></div>
-    <div class="error-banner" id="err-banner">⚠ BACKEND UNREACHABLE — UPDATE YOUR RENDER URL BELOW</div>
+    <div class="error-banner" id="err-banner">⚠ BACKEND UNREACHABLE — MORNING SCAN NOT YET RUN</div>
     <div class="score-wrap">
       <div class="score-num bull" id="score-num">—</div>
       <div class="score-meta">
@@ -166,18 +200,18 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
     <div class="chart-wrap"><canvas id="momoChart"></canvas></div>
   </div>
 
-  <div class="panel panel-top5">
-    <div class="panel-label">Top 5 Momo Stocks <span id="top5-ts">—</span></div>
-    <div id="top5"></div>
+  <div class="panel panel-top10">
+    <div class="panel-label">Top 10 Momo Stocks <span id="top10-ts">—</span></div>
+    <div id="top10"></div>
   </div>
 
   <div class="panel panel-stats">
     <div class="panel-label">Market Breadth</div>
     <div class="stats-grid">
-      <div class="stat-box"><div class="stat-n" style="color:var(--green)" id="s-bull">—</div><div class="stat-lbl">Bull Posts</div></div>
-      <div class="stat-box"><div class="stat-n" style="color:var(--red)" id="s-bear">—</div><div class="stat-lbl">Bear Posts</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--green)" id="s-bull">—</div><div class="stat-lbl">Bullish</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--red)" id="s-bear">—</div><div class="stat-lbl">Bearish</div></div>
       <div class="stat-box"><div class="stat-n" style="color:var(--cyan)" id="s-tickers">—</div><div class="stat-lbl">Tickers Hot</div></div>
-      <div class="stat-box"><div class="stat-n" style="color:var(--amber)" id="s-msgs">—</div><div class="stat-lbl">Total Posts</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--amber)" id="s-msgs">—</div><div class="stat-lbl">Total Likes</div></div>
     </div>
   </div>
 
@@ -187,21 +221,14 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
   </div>
 </div>
 
-<footer><span class="blink">▮</span> STOCKTWITS SENTIMENT · AUTO-REFRESH 90s · MOMO INDEX v3.0</footer>
+<footer><span class="blink">▮</span> X/TWITTER SENTIMENT · AUTO-REFRESH 90s · MOMO INDEX v3.1</footer>
 
 <script>
 const BACKEND = '';
 
-const NAMES = {
-  NVDA:'Nvidia',TSLA:'Tesla',AAPL:'Apple',META:'Meta',AMZN:'Amazon',
-  MSFT:'Microsoft',GOOGL:'Alphabet',AMD:'AMD',COIN:'Coinbase',
-  MSTR:'MicroStrategy',HOOD:'Robinhood',PLTR:'Palantir',SOFI:'SoFi',
-  SMCI:'Supermicro',RIVN:'Rivian',SPOT:'Spotify',CRWD:'CrowdStrike',
-  MELI:'MercadoLibre',SHOP:'Shopify',SPY:'S&P 500 ETF'
-};
-
 let chartHistory = {labels:[],scores:[]};
 let momoChart = null;
+let _lastStocks = [];
 
 // ── SIGNAL ────────────────────────────────────────────
 function getSignal(score) {
@@ -217,6 +244,70 @@ function calcIndex(stocks) {
   return Math.round(stocks.reduce((s,d)=>s+d.momoScore,0)/stocks.length);
 }
 
+// ── MODAL ─────────────────────────────────────────────
+function openModal(s) {
+  const isBull = s.sentiment === 'bullish';
+  const col = isBull ? 'var(--green)' : s.sentiment === 'bearish' ? 'var(--red)' : 'var(--amber)';
+  const tagCls = isBull ? 'tag-bull' : s.sentiment === 'bearish' ? 'tag-bear' : 'tag-flat';
+  const sentLabel = (s.sentiment||'neutral').toUpperCase();
+  const bp = s.bullPct != null ? s.bullPct : 50;
+  const tweetText = (s.topTweet||'No signal text available').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Build a human-readable "why" explanation
+  const reasons = [];
+  if (s.totalTweets >= 5)  reasons.push(`High mention frequency (${s.totalTweets} posts)`);
+  if (s.totalLikes >= 100) reasons.push(`Strong engagement (${s.totalLikes} likes)`);
+  if (bp >= 80)            reasons.push(`Heavily bullish sentiment (${bp}% bull)`);
+  if (s.momoScore >= 80)   reasons.push(`Top-tier momentum score`);
+  if (s.totalTweets >= 3 && s.totalLikes >= 50) reasons.push(`Consistent signal across multiple traders`);
+  if (reasons.length === 0) reasons.push(`Organic discovery via X keyword scan`);
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-sym">$${s.sym}</div>
+      <div class="modal-name">${s.name||s.sym}</div>
+    </div>
+    <div class="modal-score-row">
+      <div class="modal-score-big" style="color:${col}">${s.momoScore}</div>
+      <div class="modal-score-bar-wrap">
+        <div style="font-size:8px;color:var(--muted);letter-spacing:1px">MOMO SCORE</div>
+        <div class="modal-score-bar">
+          <div class="modal-score-bar-fill" style="width:${s.momoScore}%;background:${col}"></div>
+        </div>
+        <div class="modal-tag ${tagCls}">${sentLabel}</div>
+      </div>
+    </div>
+
+    <div class="modal-stats-row">
+      <div class="modal-stat">
+        <div class="modal-stat-n" style="color:var(--cyan)">${s.totalTweets||0}</div>
+        <div class="modal-stat-lbl">Posts</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-n" style="color:var(--amber)">${s.totalLikes||0}</div>
+        <div class="modal-stat-lbl">Likes</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-n" style="color:${col}">${bp}%</div>
+        <div class="modal-stat-lbl">Bull %</div>
+      </div>
+    </div>
+
+    <div class="modal-section">Why it has momo today</div>
+    <div class="modal-tweet">${tweetText}</div>
+    <div class="modal-why">
+      ${reasons.map(r=>`▸ ${r}`).join('<br>')}
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
 // ── RENDERS ───────────────────────────────────────────
 function renderScore(stocks) {
   const score = calcIndex(stocks);
@@ -227,72 +318,76 @@ function renderScore(stocks) {
   document.getElementById('signal-tag').className = `signal-tag tag-${sig.cls}`;
   document.getElementById('score-desc').textContent = sig.desc;
   document.getElementById('score-upd').textContent = new Date().toLocaleTimeString();
-  const tb = stocks.reduce((s,d)=>s+d.bullCount,0);
-  const rb = stocks.reduce((s,d)=>s+d.bearCount,0);
-  const tot = tb+rb||1;
-  const bp = Math.round(tb/tot*100);
-  document.getElementById('bull-pct').textContent=bp+'%';
-  document.getElementById('bear-pct').textContent=(100-bp)+'%';
-  document.getElementById('bull-bar').style.width=bp+'%';
-  document.getElementById('bear-bar').style.width=(100-bp)+'%';
+
+  // Use bullPct from each stock (average) for the sentiment bar
+  const avgBull = Math.round(stocks.reduce((s,d)=>s+(d.bullPct!=null?d.bullPct:50),0) / (stocks.length||1));
+  document.getElementById('bull-pct').textContent = avgBull+'%';
+  document.getElementById('bear-pct').textContent = (100-avgBull)+'%';
+  document.getElementById('bull-bar').style.width = avgBull+'%';
+  document.getElementById('bear-bar').style.width = (100-avgBull)+'%';
   return score;
 }
 
-function renderTop5(stocks) {
-  const top5=[...stocks].sort((a,b)=>b.momoScore-a.momoScore).slice(0,5);
-  const el=document.getElementById('top5'); el.innerHTML='';
-  top5.forEach((s,i)=>{
-    const up=s.bullPct>=50, col=up?'var(--green)':'var(--red)';
-    const row=document.createElement('div'); row.className='stock-item';
-    row.style.animationDelay=(i*.07)+'s';
-    row.innerHTML=`
+function renderTop10(stocks) {
+  const top10 = [...stocks].sort((a,b)=>b.momoScore-a.momoScore).slice(0,10);
+  const el = document.getElementById('top10'); el.innerHTML='';
+  top10.forEach((s,i)=>{
+    const isBull = (s.bullPct!=null?s.bullPct:50) >= 50;
+    const col = isBull ? 'var(--green)' : 'var(--red)';
+    const bp = s.bullPct!=null ? s.bullPct : 50;
+    const row = document.createElement('div');
+    row.className = 'stock-item';
+    row.style.animationDelay = (i*.05)+'s';
+    row.title = 'Click to see why';
+    row.innerHTML = `
       <div class="s-rank">#${i+1}</div>
       <div>
         <div class="s-sym">${s.sym}</div>
-        <div class="s-name">${s.name||NAMES[s.sym]||s.sym}</div>
-        <div class="s-sent">
-          <span class="sent-pill sp-bull">▲ ${s.bullCount}</span>
-          <span class="sent-pill sp-bear">▼ ${s.bearCount}</span>
-        </div>
+        <div class="s-name">${s.name||s.sym}</div>
+        <div class="s-hint">${s.totalTweets||0} posts · ${s.totalLikes||0} likes</div>
       </div>
-      <div><div class="s-chg" style="color:${col}">${s.bullPct}%<br><span style="font-size:8px;color:var(--muted)">BULL</span></div></div>
+      <div>
+        <div class="s-chg" style="color:${col}">${bp}%<br><span style="font-size:7px;color:var(--muted)">${(s.sentiment||'neutral').toUpperCase()}</span></div>
+      </div>
       <div class="s-score-wrap">
         <div class="s-bar"><div class="s-bar-fill" style="width:${s.momoScore}%;background:${col}"></div></div>
         <div class="s-momo">MOM ${s.momoScore}</div>
       </div>`;
+    row.addEventListener('click', ()=>openModal(s));
     el.appendChild(row);
   });
-  document.getElementById('top5-ts').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('top10-ts').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 }
 
 function renderStats(stocks) {
-  const bull=stocks.reduce((s,d)=>s+d.bullCount,0);
-  const bear=stocks.reduce((s,d)=>s+d.bearCount,0);
-  const total=stocks.reduce((s,d)=>s+d.total,0);
-  const hot=stocks.filter(s=>s.momoScore>55).length;
-  document.getElementById('s-bull').textContent=bull;
-  document.getElementById('s-bear').textContent=bear;
-  document.getElementById('s-tickers').textContent=hot;
-  document.getElementById('s-msgs').textContent=total;
+  // Count by actual sentiment field
+  const bull  = stocks.filter(s=>s.sentiment==='bullish').length;
+  const bear  = stocks.filter(s=>s.sentiment==='bearish').length;
+  const hot   = stocks.filter(s=>s.momoScore>55).length;
+  const likes = stocks.reduce((sum,s)=>sum+(s.totalLikes||0),0);
+  document.getElementById('s-bull').textContent    = bull;
+  document.getElementById('s-bear').textContent    = bear;
+  document.getElementById('s-tickers').textContent = hot;
+  document.getElementById('s-msgs').textContent    = likes >= 1000 ? (likes/1000).toFixed(1)+'K' : likes;
 }
 
 function renderFeed(stocks) {
-  const all=[];
-  stocks.forEach(s=>(s.posts||[]).forEach(p=>all.push({sym:s.sym,...p})));
-  all.sort((a,b)=>new Date(b.time)-new Date(a.time));
-  const el=document.getElementById('feed'); el.innerHTML='';
-  all.slice(0,15).forEach(p=>{
-    const up=p.sentiment==='Bullish';
-    const t=new Date(p.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const item=document.createElement('div'); item.className='feed-item';
-    item.innerHTML=`
+  const sorted = [...stocks].sort((a,b)=>b.momoScore-a.momoScore);
+  const el = document.getElementById('feed'); el.innerHTML='';
+  sorted.forEach(s=>{
+    if (!s.topTweet) return;
+    const isBull = s.sentiment === 'bullish';
+    const item = document.createElement('div');
+    item.className = 'feed-item';
+    item.innerHTML = `
       <div>
-        <div class="feed-sym" style="color:${up?'var(--green)':'var(--red)'}">\$${p.sym}</div>
-        <div class="${up?'feed-bull':'feed-bear'}">${up?'▲ BULL':'▼ BEAR'}</div>
-        <div class="feed-time">${t}</div>
+        <div class="feed-sym" style="color:${isBull?'var(--green)':'var(--red)'}">\$${s.sym}</div>
+        <div class="${isBull?'feed-bull':'feed-bear'}">${isBull?'▲ BULL':'▼ BEAR'}</div>
+        <div class="feed-stat">${s.totalLikes||0}♥</div>
       </div>
-      <div class="feed-text">${(p.body||'').slice(0,100)}</div>
-      <div style="font-size:8px;color:var(--muted2);text-align:right">@${p.user}</div>`;
+      <div class="feed-text">${(s.topTweet||'').slice(0,100)}</div>
+      <div class="feed-stat">${s.totalTweets||0} posts</div>`;
+    item.addEventListener('click', ()=>openModal(s));
     el.appendChild(item);
   });
 }
@@ -302,7 +397,7 @@ function renderTicker(stocks) {
   const html=[...sorted,...sorted].map(s=>`
     <div class="t-item">
       <span class="t-sym">\$${s.sym}</span>
-      <span class="${s.bullPct>=50?'t-bull':'t-bear'}">${s.bullPct}% ${s.bullPct>=50?'▲':'▼'}</span>
+      <span class="${(s.bullPct||50)>=50?'t-bull':'t-bear'}">${s.bullPct||50}% ${(s.bullPct||50)>=50?'▲':'▼'}</span>
     </div>`).join('');
   document.getElementById('ticker').innerHTML=html;
 }
@@ -369,7 +464,6 @@ setInterval(updateClock,1000); updateClock();
 
 // ── MAIN REFRESH ──────────────────────────────────────
 async function refresh() {
-  setLoader(20,'FETCHING STOCKTWITS DATA...');
   try {
     const res = await fetch(`${BACKEND}/api/momo`);
     if (!res.ok) throw new Error('bad response');
@@ -378,9 +472,10 @@ async function refresh() {
 
     setLoader(80,'CALCULATING MOMO SCORES...');
     document.getElementById('err-banner').style.display='none';
+    _lastStocks = stocks;
 
     const score = renderScore(stocks);
-    renderTop5(stocks);
+    renderTop10(stocks);
     renderStats(stocks);
     renderFeed(stocks);
     renderTicker(stocks);
@@ -389,7 +484,7 @@ async function refresh() {
   } catch(e) {
     console.error('Backend error:', e);
     document.getElementById('err-banner').style.display='block';
-    document.getElementById('score-desc').textContent = 'Update BACKEND url at top of script, then redeploy.';
+    document.getElementById('score-desc').textContent = 'Morning scan not yet run, or backend unavailable.';
   }
 
   setLoader(100,'LIVE');
@@ -404,6 +499,7 @@ for(let i=10;i>=1;i--){
 }
 
 initChart();
+setLoader(20,'FETCHING X/TWITTER DATA...');
 refresh();
 setInterval(refresh,90000);
 </script>
