@@ -1,7 +1,7 @@
 """
 momo_api.py — MOMO Index backend
-Dual source: Reddit (every 5 min, free) + Apify/X Twitter (every 6h, ~$5/mo).
-Background thread handles all refreshes; API responses are instant from cache.
+X/Twitter sentiment via Apify tweet-scraper (apidojo~tweet-scraper).
+Background thread refreshes every 2 hours. Reddit removed.
 """
 
 from flask import Blueprint, jsonify
@@ -41,33 +41,19 @@ BEAR_WORDS = {
     'bubble','overvalued','topped','bagholder','drilling','rekt'
 }
 
-# ── Reddit ────────────────────────────────────────────────────────────────────
-MULTI_SUB = 'wallstreetbets+stocks+options+investing+stockmarket'
-REDDIT_HEADERS = {
-    'User-Agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) '
-                   'Chrome/122.0.0.0 Safari/537.36'),
-    'Accept': 'application/json',
-}
-
-# ── Apify / X ─────────────────────────────────────────────────────────────────
+# ── Apify config ──────────────────────────────────────────────────────────────
 APIFY_TOKEN = os.environ.get('APIFY_TOKEN', '')
 APIFY_ACTOR = 'apidojo~tweet-scraper'
 APIFY_SYNC  = (f'https://api.apify.com/v2/acts/{APIFY_ACTOR}'
                f'/run-sync-get-dataset-items')
-# One combined OR search for all tickers — one run, cheapest approach
-X_SEARCH = ' OR '.join(f'${s}' for s in UNIVERSE)
+
+REFRESH_INTERVAL = 7200   # 2 hours between Apify runs
 
 # ── State ─────────────────────────────────────────────────────────────────────
-_cache        = {'data': None, 'ts': 0}
-_x_cache      = {}     # sym -> [post dicts]
-_last_x_fetch = 0
-_lock         = threading.Lock()
+_cache = {'data': None, 'ts': 0}
+_lock  = threading.Lock()
 
-REDDIT_TTL = 300    # 5 min refresh
-X_TTL      = 21600  # 6 hour refresh (keeps within $5/mo free tier)
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Sentiment ─────────────────────────────────────────────────────────────────
 def score_sentiment(text):
     words = set(re.sub(r'[^a-z\s]', '', text.lower()).split())
     bull  = len(words & BULL_WORDS)
@@ -76,179 +62,135 @@ def score_sentiment(text):
     if bear > bull:  return 'Bearish'
     return 'Neutral'
 
-def fetch_reddit(sym):
-    try:
-        url = (f'https://www.reddit.com/r/{MULTI_SUB}/search.json'
-               f'?q=%24{sym}&restrict_sr=on&sort=new&t=day&limit=25')
-        res = requests.get(url, headers=REDDIT_HEADERS, timeout=10)
-        if res.status_code != 200:
-            print(f'Reddit {res.status_code} for {sym}')
-            return []
-        posts = []
-        for c in res.json().get('data', {}).get('children', []):
-            d = c.get('data', {})
-            posts.append({
-                'text':   d.get('title', ''),
-                'score':  d.get('score', 0),
-                'author': d.get('author', 'anon'),
-                'ts':     d.get('created_utc', 0),
-                'sub':    d.get('subreddit', ''),
-                'source': 'reddit',
-            })
-        return posts
-    except Exception as e:
-        print(f'Reddit error {sym}: {e}')
-        return []
-
-def fetch_x_apify():
-    """One Apify run covering all 20 tickers. ~200 tweets ≈ $0.08."""
+# ── Apify fetch ───────────────────────────────────────────────────────────────
+def fetch_all_tickers():
+    """
+    One Apify run: 20 individual search terms, 10 tweets each = ~200 tweets.
+    Cost: ~$0.08 per run.
+    """
     if not APIFY_TOKEN:
-        print('No APIFY_TOKEN — skipping X fetch')
+        print('No APIFY_TOKEN set')
         return {}
+
+    payload = {
+        'searchTerms': [f'${sym}' for sym in UNIVERSE],  # one per ticker
+        'maxItems':    200,
+        'sort':        'Latest',
+        'tweetLanguage': 'en',
+    }
+    print(f'Apify: fetching X data for {len(UNIVERSE)} tickers...')
     try:
-        payload = {
-            'searchTerms':   [X_SEARCH],
-            'maxItems':      200,
-            'sort':          'Latest',
-            'tweetLanguage': 'en',
-        }
-        print('Apify: starting X fetch for all tickers...')
         res = requests.post(
             APIFY_SYNC,
             params={'token': APIFY_TOKEN},
             json=payload,
-            timeout=180,
+            timeout=240,
         )
-        if res.status_code != 200:
-            print(f'Apify error {res.status_code}: {res.text[:300]}')
-            return {}
-        tweets = res.json()
-        print(f'Apify: received {len(tweets)} tweets')
-
-        # Bucket each tweet by which tickers it mentions
-        result = {sym: [] for sym in UNIVERSE}
-        for t in tweets:
-            text = (t.get('text') or t.get('full_text') or '')
-            author_obj = t.get('author', {})
-            if isinstance(author_obj, dict):
-                author = (author_obj.get('userName')
-                          or author_obj.get('screen_name', 'anon'))
-            else:
-                author = str(author_obj) or 'anon'
-            likes = (t.get('likeCount') or t.get('favorite_count') or 0)
-            for sym in UNIVERSE:
-                if f'${sym}' in text.upper():
-                    result[sym].append({
-                        'text':   text,
-                        'score':  likes,
-                        'author': author,
-                        'ts':     0,
-                        'source': 'x',
-                    })
-        return result
     except Exception as e:
-        print(f'Apify error: {e}')
+        print(f'Apify request error: {e}')
         return {}
 
-def calc_ticker(sym, reddit_posts, x_posts=None):
-    all_posts = list(reddit_posts) + list(x_posts or [])
-    if not all_posts:
-        return None
+    # run-sync-get-dataset-items returns 201 on success
+    if res.status_code not in (200, 201):
+        print(f'Apify HTTP {res.status_code}: {res.text[:200]}')
+        return {}
 
-    bull_count = bear_count = 0
-    feed_posts = []
-    for p in all_posts:
+    try:
+        items = res.json()
+    except Exception:
+        print('Apify: invalid JSON response')
+        return {}
+
+    # Filter out noResults placeholders
+    tweets = [t for t in items if not t.get('noResults')]
+    print(f'Apify: {len(tweets)} real tweets (from {len(items)} items)')
+
+    # Bucket by ticker
+    buckets = {sym: [] for sym in UNIVERSE}
+    for t in tweets:
+        text = t.get('text') or t.get('full_text') or ''
+        author_obj = t.get('author', {})
+        if isinstance(author_obj, dict):
+            author = (author_obj.get('userName')
+                      or author_obj.get('screen_name', 'anon'))
+        else:
+            author = str(author_obj) or 'anon'
+        likes = t.get('likeCount') or t.get('favorite_count') or 0
+        for sym in UNIVERSE:
+            if f'${sym}' in text.upper():
+                buckets[sym].append({
+                    'text':   text,
+                    'score':  likes,
+                    'author': author,
+                    'source': 'x',
+                })
+
+    return buckets
+
+# ── Scoring ───────────────────────────────────────────────────────────────────
+def calc_ticker(sym, posts):
+    if not posts:
+        return None
+    bull = bear = 0
+    feed = []
+    for p in posts:
         sent = score_sentiment(p['text'])
-        if sent == 'Bullish':  bull_count += 1
-        elif sent == 'Bearish': bear_count += 1
-        prefix = '🐦' if p.get('source') == 'x' else f"[r/{p.get('sub','?')}]"
-        feed_posts.append({
-            'body':      f"{prefix} {p['text'][:120]}",
+        if sent == 'Bullish':  bull += 1
+        elif sent == 'Bearish': bear += 1
+        feed.append({
+            'body':      f"🐦 {p['text'][:140]}",
             'sentiment': sent,
             'user':      p.get('author', 'anon'),
             'followers': p.get('score', 0),
-            'time':      time.strftime('%Y-%m-%dT%H:%M:%SZ',
-                                       time.gmtime(p.get('ts') or 0)),
+            'time':      '',
         })
-
-    total    = bull_count + bear_count or 1
-    bull_pct = round(bull_count / total * 100)
-    vol      = len(all_posts)
-    x_count  = sum(1 for p in all_posts if p.get('source') == 'x')
-
-    vol_score  = min(vol / 25 * 40, 40)
+    total      = bull + bear or 1
+    bull_pct   = round(bull / total * 100)
+    vol_score  = min(len(posts) / 10 * 40, 40)
     momo_score = min(round(vol_score + bull_pct * 0.6), 100)
-
     return {
         'sym':       sym,
         'name':      NAMES.get(sym, sym),
-        'bullCount': bull_count,
-        'bearCount': bear_count,
+        'bullCount': bull,
+        'bearCount': bear,
         'bullPct':   bull_pct,
         'bearPct':   100 - bull_pct,
-        'total':     vol,
-        'xPosts':    x_count,
+        'total':     len(posts),
+        'xPosts':    len(posts),
         'momoScore': momo_score,
-        'posts':     sorted(feed_posts,
-                            key=lambda p: p['followers'],
-                            reverse=True)[:5],
+        'posts':     sorted(feed, key=lambda p: p['followers'], reverse=True)[:5],
     }
 
-# ── Background refresh loops ──────────────────────────────────────────────────
-
-def _reddit_loop():
-    """Refresh Reddit data every 5 min. Always runs; never waits on Apify."""
+# ── Background loop ───────────────────────────────────────────────────────────
+def _refresh_loop():
     while True:
         try:
-            with _lock:
-                x_data = dict(_x_cache)
-            results = []
-            for sym in UNIVERSE:
-                posts = fetch_reddit(sym)
-                data  = calc_ticker(sym, posts, x_data.get(sym, []))
-                if data:
-                    results.append(data)
-                time.sleep(2)   # 2s gap — gentler on Reddit to avoid 429s
-
-            if results:
-                sources = ['Reddit']
-                if x_data and any(x_data.values()):
-                    sources.append('X/Twitter')
-                with _lock:
-                    _cache['data'] = {
-                        'stocks':    results,
-                        'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ',
-                                                   time.gmtime()),
-                        'sources':   sources,
-                    }
-                    _cache['ts'] = time.time()
-                print(f'Reddit cache: {len(results)} tickers | {sources}')
+            buckets = fetch_all_tickers()
+            if buckets:
+                results = []
+                for sym in UNIVERSE:
+                    data = calc_ticker(sym, buckets.get(sym, []))
+                    if data:
+                        results.append(data)
+                if results:
+                    with _lock:
+                        _cache['data'] = {
+                            'stocks':    results,
+                            'fetchedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ',
+                                                       time.gmtime()),
+                            'sources':   ['X/Twitter'],
+                        }
+                        _cache['ts'] = time.time()
+                    print(f'Cache updated: {len(results)} tickers from X')
+                else:
+                    print('Apify returned data but no tickers matched')
             else:
-                print('Reddit cache: no results this cycle')
+                print('Apify returned empty — cache unchanged')
         except Exception as e:
-            print(f'Reddit loop error: {e}')
-        time.sleep(REDDIT_TTL)
+            print(f'Refresh loop error: {e}')
+        time.sleep(REFRESH_INTERVAL)
 
-
-def _apify_loop():
-    """Refresh X/Twitter data every 6h via Apify — runs independently."""
-    # Wait 30s on boot so Reddit populates the cache first
-    time.sleep(30)
-    while True:
-        try:
-            fresh = fetch_x_apify()
-            if fresh:
-                with _lock:
-                    _x_cache.update(fresh)
-                print('Apify X cache updated')
-        except Exception as e:
-            print(f'Apify loop error: {e}')
-        time.sleep(X_TTL)
-
-
-threading.Thread(target=_reddit_loop, daemon=True).start()
-if APIFY_TOKEN:
-    threading.Thread(target=_apify_loop, daemon=True).start()
+threading.Thread(target=_refresh_loop, daemon=True).start()
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 @momo_bp.route('/api/momo')
@@ -256,19 +198,19 @@ def momo_index():
     with _lock:
         data = _cache['data']
     if not data:
-        return jsonify({'error': 'Warming up — check back in 60 seconds'}), 503
+        return jsonify({'error': 'Warming up — first X fetch in progress, check back in 2 min'}), 503
     return jsonify(data)
-
 
 @momo_bp.route('/api/momo/ticker/<sym>')
 def momo_ticker(sym):
     sym = sym.upper()
     if sym not in UNIVERSE:
         return jsonify({'error': 'Ticker not in universe'}), 404
-    reddit_posts = fetch_reddit(sym)
     with _lock:
-        x_posts = _x_cache.get(sym, [])
-    data = calc_ticker(sym, reddit_posts, x_posts)
+        data = _cache['data']
     if not data:
-        return jsonify({'error': 'No posts found'}), 503
-    return jsonify(data)
+        return jsonify({'error': 'Warming up'}), 503
+    stocks = {s['sym']: s for s in data.get('stocks', [])}
+    if sym not in stocks:
+        return jsonify({'error': f'{sym} not in current cache'}), 404
+    return jsonify(stocks[sym])
