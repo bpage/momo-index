@@ -49,6 +49,12 @@ APIFY_SYNC  = (f'https://api.apify.com/v2/acts/{APIFY_ACTOR}'
 
 REFRESH_INTERVAL = 7200   # 2 hours between Apify runs
 
+# Pre-build Twitter search URLs for each ticker (startUrls format works; searchTerms doesn't)
+_SEARCH_URLS = [
+    {'url': f'https://twitter.com/search?q=%24{sym}&src=typed_query&f=live'}
+    for sym in UNIVERSE
+]
+
 # ── State ─────────────────────────────────────────────────────────────────────
 _cache = {'data': None, 'ts': 0}
 _lock  = threading.Lock()
@@ -73,9 +79,9 @@ def fetch_all_tickers():
         return {}
 
     payload = {
-        'searchTerms': [f'${sym}' for sym in UNIVERSE],  # one per ticker
-        'maxItems':    200,
-        'sort':        'Latest',
+        'startUrls':     _SEARCH_URLS,   # real Twitter search URLs, one per ticker
+        'maxItems':      200,
+        'sort':          'Latest',
         'tweetLanguage': 'en',
     }
     print(f'Apify: fetching X data for {len(UNIVERSE)} tickers...')
@@ -84,7 +90,7 @@ def fetch_all_tickers():
             APIFY_SYNC,
             params={'token': APIFY_TOKEN},
             json=payload,
-            timeout=240,
+            timeout=90,   # well under gunicorn --timeout 300
         )
     except Exception as e:
         print(f'Apify request error: {e}')
