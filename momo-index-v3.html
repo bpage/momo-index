@@ -40,12 +40,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 /* LAYOUT */
 .grid{display:grid;grid-template-columns:1fr;gap:10px;padding:10px;max-width:960px;margin:0 auto}
 @media(min-width:680px){
-  .grid{grid-template-columns:1fr 270px;grid-template-rows:auto auto auto auto}
+  .grid{grid-template-columns:1fr 270px;grid-template-rows:auto auto auto auto auto}
   .panel-score{grid-column:1;grid-row:1}
-  .panel-chart{grid-column:1;grid-row:2/4}
-  .panel-top10{grid-column:2;grid-row:1/3}
-  .panel-stats{grid-column:2;grid-row:3}
-  .panel-history-row{grid-column:1/3;grid-row:4}
+  .panel-chart{grid-column:1;grid-row:2}
+  .panel-signals{grid-column:1;grid-row:3}
+  .panel-top10{grid-column:2;grid-row:1/4}
+  .panel-stats{grid-column:2;grid-row:4}
+  .panel-history-row{grid-column:1/3;grid-row:5}
 }
 
 /* PANELS */
@@ -73,7 +74,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .sent-val-bull{color:var(--green);text-align:right} .sent-val-bear{color:var(--red)}
 
 /* CHART */
-.chart-wrap{height:220px}
+.chart-wrap{height:150px}
 
 /* TOP 10 */
 .stock-item{padding:6px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:18px 1fr auto;gap:6px;align-items:start;cursor:pointer;transition:background .15s;border-radius:2px;opacity:0;animation:slideIn .4s ease forwards}
@@ -88,6 +89,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .s-bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
 .s-momo{font-size:8px;color:var(--muted);white-space:nowrap}
 .s-hint{font-size:7px;color:var(--muted2);letter-spacing:1px;margin-top:1px}
+
+/* TOP SIGNALS */
+.sig-item{display:grid;grid-template-columns:60px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:background .15s;border-radius:2px;animation:fadeUp .3s ease forwards}
+.sig-item:hover{background:rgba(0,229,255,.04);padding-left:4px;padding-right:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.sig-left{display:flex;flex-direction:column;gap:3px}
+.sig-sym{font-family:'Share Tech Mono',monospace;font-weight:600;font-size:13px;color:var(--white)}
+.sig-score{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700}
+.sig-tag{font-size:7px;letter-spacing:1px;font-weight:600}
+.sig-text{font-size:10px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sig-meta{font-size:8px;color:var(--muted2);margin-top:3px;font-family:'Share Tech Mono',monospace}
 
 /* STATS */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
@@ -213,6 +225,11 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
   <div class="panel panel-chart">
     <div class="panel-label">Index History <span id="chart-chg">&mdash;</span></div>
     <div class="chart-wrap"><canvas id="momoChart"></canvas></div>
+  </div>
+
+  <div class="panel panel-signals">
+    <div class="panel-label">Top Signals <span id="sig-count">&mdash;</span></div>
+    <div id="signals"></div>
   </div>
 
   <div class="panel panel-top10">
@@ -685,6 +702,35 @@ function renderTicker(stocks) {
   document.getElementById('ticker').innerHTML = html;
 }
 
+// ── TOP SIGNALS ───────────────────────────────────────
+function renderSignals(stocks) {
+  var top5 = stocks.slice().sort(function(a,b){return b.momoScore-a.momoScore}).slice(0,5);
+  var el = document.getElementById('signals'); el.innerHTML = '';
+  document.getElementById('sig-count').textContent = stocks.length + ' tickers scanned';
+
+  top5.forEach(function(s) {
+    var isBull = s.sentiment === 'bullish';
+    var col = isBull ? 'var(--green)' : s.sentiment === 'bearish' ? 'var(--red)' : 'var(--amber)';
+    var sentLabel = (s.sentiment||'neutral').toUpperCase();
+    var tweetText = (s.topTweet||'No signal text').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    var item = document.createElement('div');
+    item.className = 'sig-item';
+    item.innerHTML =
+      '<div class="sig-left">' +
+        '<div class="sig-sym" style="color:' + col + '">$' + s.sym + '</div>' +
+        '<div class="sig-score" style="color:' + col + '">MOM ' + s.momoScore + '</div>' +
+        '<div class="sig-tag" style="color:' + col + '">' + sentLabel + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="sig-text">' + tweetText + '</div>' +
+        '<div class="sig-meta">' + (s.totalTweets||0) + ' posts &#x00B7; ' + (s.totalLikes||0) + ' likes &#x00B7; ' + (s.bullPct||50) + '% bull</div>' +
+      '</div>';
+    item.addEventListener('click', (function(stock){ return function(){ openModal(stock); }; })(s));
+    el.appendChild(item);
+  });
+}
+
 // ── CHART (Daily History) ─────────────────────────────
 function initChart() {
   var ctx = document.getElementById('momoChart').getContext('2d');
@@ -790,6 +836,7 @@ async function refresh() {
     renderTop10(stocks);
     renderStats(stocks);
     renderTicker(stocks);
+    renderSignals(stocks);
 
     // Save to localStorage and update history-based panels
     _history = saveScan(stocks, score);
