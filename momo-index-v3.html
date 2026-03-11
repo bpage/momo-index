@@ -821,16 +821,64 @@ function updateClock(){
 setInterval(updateClock,1000); updateClock();
 
 // ── MAIN REFRESH ──────────────────────────────────────
-async function refresh() {
+var _retryCount = 0;
+var _maxRetries = 3;
+var _dataLoaded = false;
+
+function fetchWithTimeout(url, ms) {
+  var ctrl = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, ms);
+  return fetch(url, {signal: ctrl.signal}).finally(function(){ clearTimeout(timer); });
+}
+
+async function refresh(isRetry) {
+  if (!isRetry) _retryCount = 0;
+
+  // Show cached data immediately while we fetch fresh data
+  if (!_dataLoaded) {
+    var cached = localStorage.getItem('momo_last_stocks');
+    if (cached) {
+      try {
+        var cachedData = JSON.parse(cached);
+        if (cachedData && cachedData.length > 0) {
+          setLoader(60,'LOADING CACHED DATA...');
+          _lastStocks = cachedData.stocks || cachedData;
+          var cs = renderScore(_lastStocks);
+          renderTop10(_lastStocks);
+          renderStats(_lastStocks);
+          renderTicker(_lastStocks);
+          renderSignals(_lastStocks);
+          _history = loadHistory();
+          updateChartFromHistory(_history, cs);
+          renderStreaks(_lastStocks, _history);
+          renderMovers(_lastStocks, _history);
+          document.getElementById('err-banner').textContent = '\u26A0 WAKING SERVER \u2014 SHOWING CACHED DATA...';
+          document.getElementById('err-banner').style.display='block';
+          document.getElementById('err-banner').style.background='rgba(255,171,0,.12)';
+          document.getElementById('err-banner').style.borderColor='rgba(255,171,0,.3)';
+          document.getElementById('err-banner').style.color='var(--amber)';
+        }
+      } catch(ex) {}
+    }
+  }
+
   try {
-    var res = await fetch(BACKEND + '/api/momo');
+    var timeout = _retryCount === 0 ? 15000 : 90000;
+    setLoader(_dataLoaded ? 90 : 20, _retryCount > 0 ? 'WAKING SERVER (ATTEMPT ' + (_retryCount+1) + ')...' : 'FETCHING X/TWITTER DATA...');
+    var res = await fetchWithTimeout(BACKEND + '/api/momo', timeout);
     if (!res.ok) throw new Error('bad response');
     var json = await res.json();
     var stocks = json.stocks || [];
 
     setLoader(80,'CALCULATING MOMO SCORES...');
     document.getElementById('err-banner').style.display='none';
+    // Reset banner styles
+    document.getElementById('err-banner').style.background='';
+    document.getElementById('err-banner').style.borderColor='';
+    document.getElementById('err-banner').style.color='';
+    document.getElementById('err-banner').textContent='\u26A0 BACKEND UNREACHABLE \u2014 MORNING SCAN NOT YET RUN';
     _lastStocks = stocks;
+    _dataLoaded = true;
 
     var score = renderScore(stocks);
     renderTop10(stocks);
@@ -838,7 +886,8 @@ async function refresh() {
     renderTicker(stocks);
     renderSignals(stocks);
 
-    // Save to localStorage and update history-based panels
+    // Save to localStorage for cache and update history-based panels
+    localStorage.setItem('momo_last_stocks', JSON.stringify(stocks));
     _history = saveScan(stocks, score);
     updateChartFromHistory(_history, score);
     renderStreaks(stocks, _history);
@@ -846,7 +895,21 @@ async function refresh() {
 
   } catch(e) {
     console.error('Backend error:', e);
+
+    // Retry with longer timeout for Render cold start
+    if (_retryCount < _maxRetries) {
+      _retryCount++;
+      console.log('Retrying fetch, attempt ' + (_retryCount+1) + '...');
+      setLoader(20, 'WAKING SERVER (ATTEMPT ' + (_retryCount+1) + ')...');
+      setTimeout(function(){ refresh(true); }, 2000);
+      return;
+    }
+
     document.getElementById('err-banner').style.display='block';
+    document.getElementById('err-banner').style.background='';
+    document.getElementById('err-banner').style.borderColor='';
+    document.getElementById('err-banner').style.color='';
+    document.getElementById('err-banner').textContent='\u26A0 BACKEND UNREACHABLE \u2014 MORNING SCAN NOT YET RUN';
     document.getElementById('score-desc').textContent = 'Morning scan not yet run, or backend unavailable.';
 
     // Still load chart from history even if backend is down
