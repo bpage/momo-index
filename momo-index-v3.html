@@ -272,6 +272,61 @@ let momoChart = null;
 let _lastStocks = [];
 let _history = [];
 
+// ── TICKER NAME LOOKUP ──────────────────────────────
+const TICKER_NAMES = {
+  AAPL:'Apple',ABNB:'Airbnb',ACHR:'Archer Aviation',ADBE:'Adobe',ADM:'Archer-Daniels-Midland',
+  ADP:'Automatic Data Processing',ADSK:'Autodesk',AFRM:'Affirm',AG:'First Majestic Silver',
+  AI:'C3.ai',ALAB:'Astera Labs',ALB:'Albemarle',AMAT:'Applied Materials',AMD:'AMD',AMGN:'Amgen',
+  AMZN:'Amazon',ANET:'Arista Networks',ANF:'Abercrombie & Fitch',APP:'AppLovin',APPS:'Digital Turbine',
+  ARM:'Arm Holdings',ARQT:'Arcutis Bio',ASTL:'Algoma Steel',ASTS:'AST SpaceMobile',AVGO:'Broadcom',
+  AXON:'Axon Enterprise',AXP:'American Express',BA:'Boeing',BABA:'Alibaba',BAC:'Bank of America',
+  BIDU:'Baidu',BILL:'BILL Holdings',BIRK:'Birkenstock',BKNG:'Booking Holdings',BMBL:'Bumble',
+  BMY:'Bristol-Myers Squibb',BNTX:'BioNTech',BOWL:'Bowlero',BTI:'British American Tobacco',
+  BYND:'Beyond Meat',C:'Citigroup',CAT:'Caterpillar',CCL:'Carnival',CELH:'Celsius Holdings',
+  CEG:'Constellation Energy',CF:'CF Industries',CFLT:'Confluent',CHPT:'ChargePoint',CL:'Colgate-Palmolive',
+  CLF:'Cleveland-Cliffs',CLSK:'CleanSpark',CMG:'Chipotle',CMPS:'Compass Pathways',COIN:'Coinbase',
+  COP:'ConocoPhillips',COST:'Costco',CRM:'Salesforce',CRWD:'CrowdStrike',CSCO:'Cisco',
+  CVNA:'Carvana',CVS:'CVS Health',CVX:'Chevron',DDOG:'Datadog',DE:'John Deere',DELL:'Dell Technologies',
+  DG:'Dollar General',DIS:'Disney',DLTR:'Dollar Tree',DNA:'Ginkgo Bioworks',DOCS:'Doximity',
+  DSGX:'Descartes Systems',DUOL:'Duolingo',DVN:'Devon Energy',DXCM:'DexCom',EA:'Electronic Arts',
+  EBAY:'eBay',EGLD:'MultiversX',ENPH:'Enphase Energy',ENVX:'Enovix',ESTC:'Elastic',
+  ETSY:'Etsy',EW:'Edwards Lifesciences',F:'Ford',FANG:'Diamondback Energy',FCX:'Freeport-McMoRan',
+  FICO:'Fair Isaac',FISH:'Angel Seafood',FIVE:'Five Below',FOSL:'Fossil Group',FSLR:'First Solar',
+  FTNT:'Fortinet',GD:'General Dynamics',GE:'GE Aerospace',GILD:'Gilead Sciences',GLW:'Corning',
+  GM:'General Motors',GME:'GameStop',GNRC:'Generac',GOOG:'Alphabet',GOOGL:'Alphabet',
+  GRAB:'Grab Holdings',GS:'Goldman Sachs',HAL:'Halliburton',HBI:'Hanesbrands',HD:'Home Depot',
+  HIMS:'Hims & Hers Health',HON:'Honeywell',HPE:'Hewlett Packard Enterprise',HSBC:'HSBC',
+  HUBS:'HubSpot',HUT:'Hut 8 Mining',HYMC:'Hycroft Mining',IBM:'IBM',ICE:'Intercontinental Exchange',
+  INTC:'Intel',INTU:'Intuit',IONQ:'IonQ',IOVA:'Iovance Bio',ISRG:'Intuitive Surgical',
+  JD:'JD.com',JNJ:'Johnson & Johnson',JPM:'JPMorgan Chase',KO:'Coca-Cola',KOS:'Kosmos Energy',
+  KVUE:'Kenvue',LEN:'Lennar',LI:'Li Auto',LLY:'Eli Lilly',LMT:'Lockheed Martin',LOW:'Lowes',
+  LRCX:'Lam Research',LUMN:'Lumen Technologies',LUV:'Southwest Airlines',LYFT:'Lyft',
+  MA:'Mastercard',MARA:'Marathon Digital',MCD:'McDonalds',MCK:'McKesson',MDGL:'Madrigal Pharma',
+  META:'Meta Platforms',MO:'Altria',MPLX:'MPLX',MRNA:'Moderna',MRO:'Marathon Oil',
+  MRVL:'Marvell Technology',MS:'Morgan Stanley',MSFT:'Microsoft',MSTR:'MicroStrategy',
+  MU:'Micron Technology',NBIS:'Nebius Group',NET:'Cloudflare',NFLX:'Netflix',NIO:'NIO',
+  NKE:'Nike',NTSK:'Netstock',NVDA:'Nvidia',NVEI:'Nuvei',NVO:'Novo Nordisk',NXPI:'NXP Semiconductors',
+  OAS:'Oasis Petroleum',OKTA:'Okta',ORCL:'Oracle',OXY:'Occidental Petroleum',PANW:'Palo Alto Networks',
+  PATH:'UiPath',PAYC:'Paycom',PDD:'PDD Holdings',PEP:'PepsiCo',PFE:'Pfizer',PG:'Procter & Gamble',
+  PINS:'Pinterest',PLTR:'Palantir',PM:'Philip Morris',PYPL:'PayPal',QCOM:'Qualcomm',
+  QS:'QuantumScape',RDDT:'Reddit',RBLX:'Roblox',RGTI:'Rigetti Computing',RIOT:'Riot Platforms',
+  RITE:'Rite Aid',RIVN:'Rivian',RKLB:'Rocket Lab',ROKU:'Roku',RSNDF:'Resonance Diamondtech',
+  RTX:'RTX Corp',RUM:'Rumble',RXRX:'Recursion Pharma',SBUX:'Starbucks',SCHW:'Charles Schwab',
+  SE:'Sea Limited',セLL:'Cellnex',SFIX:'Stitch Fix',SHOP:'Shopify',SLB:'Schlumberger',
+  SMCI:'Super Micro Computer',SNAP:'Snap',SNOW:'Snowflake',SOFI:'SoFi Technologies',
+  SPR:'Spirit AeroSystems',SQ:'Block Inc',SQQQ:'ProShares UltraPro Short QQQ',SRPT:'Sarepta Therapeutics',
+  SSSS:'SuRo Capital',STEM:'Stem Inc',STZ:'Constellation Brands',SU:'Suncor Energy',
+  TELL:'Tellurian',TGT:'Target',TJX:'TJX Companies',TM:'Toyota',TMO:'Thermo Fisher Scientific',
+  TMUS:'T-Mobile',TPR:'Tapestry',TQQQ:'ProShares UltraPro QQQ',TSLA:'Tesla',TSM:'Taiwan Semiconductor',
+  TTD:'The Trade Desk',TTWO:'Take-Two Interactive',TWLO:'Twilio',TXN:'Texas Instruments',
+  U:'Unity Software',UBER:'Uber',UNH:'UnitedHealth',UPS:'UPS',UPST:'Upstart',
+  V:'Visa',VALE:'Vale SA',VRT:'Vertiv',VZ:'Verizon',W:'Wayfair',WBA:'Walgreens Boots Alliance',
+  WBD:'Warner Bros Discovery',WFC:'Wells Fargo',WMT:'Walmart',WOLF:'Wolfspeed',WOOF:'Petco Health',
+  X:'United States Steel',XOM:'ExxonMobil',XPEV:'XPeng',XYZ:'XYZ Corp',
+  ZIM:'ZIM Shipping',ZM:'Zoom Video',ZS:'Zscaler'
+};
+function tickerName(sym) { return TICKER_NAMES[sym] || sym; }
+
 // ── localStorage PERSISTENCE ──────────────────────────
 function loadHistory() {
   try {
@@ -486,7 +541,7 @@ function openModal(s) {
   document.getElementById('modal-content').innerHTML =
     '<div class="modal-header">' +
       '<div class="modal-sym">$' + s.sym + '</div>' +
-      '<div class="modal-name">' + (s.name||s.sym) + '</div>' +
+      '<div class="modal-name">' + tickerName(s.sym) + '</div>' +
     '</div>' +
     '<div class="modal-score-row">' +
       '<div class="modal-score-big" style="color:' + col + '">' + s.momoScore + '</div>' +
