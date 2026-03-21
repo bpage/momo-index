@@ -243,7 +243,7 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
       <div class="stat-box"><div class="stat-n" style="color:var(--green)" id="s-bull">&mdash;</div><div class="stat-lbl">Bullish</div></div>
       <div class="stat-box"><div class="stat-n" style="color:var(--red)" id="s-bear">&mdash;</div><div class="stat-lbl">Bearish</div></div>
       <div class="stat-box"><div class="stat-n" style="color:var(--cyan)" id="s-tickers">&mdash;</div><div class="stat-lbl">Tickers Hot</div></div>
-      <div class="stat-box"><div class="stat-n" style="color:var(--amber)" id="s-msgs">&mdash;</div><div class="stat-lbl">Total Likes</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:var(--amber)" id="s-msgs">&mdash;</div><div class="stat-lbl">Total Bulls</div></div>
     </div>
   </div>
 
@@ -561,7 +561,7 @@ function openModal(s) {
       '</div>' +
       '<div class="modal-stat">' +
         '<div class="modal-stat-n" style="color:var(--amber)">' + (s.totalLikes||0) + '</div>' +
-        '<div class="modal-stat-lbl">Likes</div>' +
+        '<div class="modal-stat-lbl">Bulls</div>' +
       '</div>' +
       '<div class="modal-stat">' +
         '<div class="modal-stat-n" style="color:' + col + '">' + bp + '%</div>' +
@@ -924,6 +924,15 @@ async function refresh(isRetry) {
     if (!res.ok) throw new Error('bad response');
     var json = await res.json();
     var stocks = json.stocks || [];
+
+    // Normalize API fields: blended engine (MRP-12) changed response shape
+    stocks = stocks.map(function(s) {
+      s.totalTweets = s.total     || 0;
+      s.totalLikes  = s.bullCount || 0;
+      s.sentiment   = s.bullPct >= 55 ? 'bullish' : s.bullPct <= 45 ? 'bearish' : 'neutral';
+      s.topTweet    = (s.posts && s.posts[0]) ? (s.posts[0].body || '') : '';
+      return s;
+    });
 
     setLoader(80,'CALCULATING MOMO SCORES...');
     document.getElementById('err-banner').style.display='none';
