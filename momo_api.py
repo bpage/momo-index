@@ -10,6 +10,7 @@ Score weights:
   X          : 15%  (cashtag engagement — requires X_BEARER_TOKEN env var)
 """
 
+import os
 import time
 import threading
 import logging
@@ -39,17 +40,17 @@ momo_bp = Blueprint('momo', __name__)
 
 UNIVERSE = [
     'NVDA', 'TSLA', 'AAPL', 'META', 'AMZN', 'MSFT', 'GOOGL', 'AMD',
-    'COIN', 'MSTR', 'HOOD', 'PLTR', 'SOFI', 'SMCI', 'RIVN',
-    'SPOT', 'CRWD', 'MELI', 'SHOP', 'SPY',
+    'COIN', 'MSTR', 'HOOD', 'PLTR', 'SOFI', 'APP', 'IBIT',
+    'SPOT', 'CRWD', 'RKLB', 'HIMS', 'CEG',
 ]
 
 NAMES = {
     'NVDA': 'Nvidia', 'TSLA': 'Tesla', 'AAPL': 'Apple', 'META': 'Meta',
     'AMZN': 'Amazon', 'MSFT': 'Microsoft', 'GOOGL': 'Alphabet', 'AMD': 'AMD',
     'COIN': 'Coinbase', 'MSTR': 'MicroStrategy', 'HOOD': 'Robinhood',
-    'PLTR': 'Palantir', 'SOFI': 'SoFi', 'SMCI': 'Supermicro', 'RIVN': 'Rivian',
-    'SPOT': 'Spotify', 'CRWD': 'CrowdStrike', 'MELI': 'MercadoLibre',
-    'SHOP': 'Shopify', 'SPY': 'S&P 500 ETF',
+    'PLTR': 'Palantir', 'SOFI': 'SoFi', 'APP': 'AppLovin', 'IBIT': 'iShares Bitcoin ETF',
+    'SPOT': 'Spotify', 'CRWD': 'CrowdStrike', 'RKLB': 'Rocket Lab', 'HIMS': 'Hims & Hers',
+    'CEG': 'Constellation Energy',
 }
 
 # ─── Score weights ──────────────────────────────────────────────────────────
@@ -107,8 +108,37 @@ def _start_scheduler():
     log.info(f"[momo] Social scanner started — refreshing every {SCAN_INTERVAL_MINUTES}m")
 
 
+# ─── Keep-alive pinger ───────────────────────────────────────────────────────
+
+def _start_keepalive():
+    """
+    Ping our own /api/momo/social-status every 10 minutes via the external URL
+    so Render's free-tier spin-down timer is reset by real inbound traffic.
+    Uses RENDER_EXTERNAL_URL if available, falls back to the production hostname.
+    """
+    external_url = os.environ.get(
+        'RENDER_EXTERNAL_URL', 'https://momo-index.onrender.com'
+    ).rstrip('/')
+    ping_url = f"{external_url}/api/momo/social-status"
+
+    def _loop():
+        time.sleep(60)  # Let Flask finish booting before first ping
+        while True:
+            try:
+                r = requests.get(ping_url, timeout=15)
+                log.info(f"[keepalive] Pinged {ping_url} -> {r.status_code}")
+            except Exception as e:
+                log.warning(f"[keepalive] Ping failed: {e}")
+            time.sleep(10 * 60)  # 10 minutes
+
+    t = threading.Thread(target=_loop, name='keepalive', daemon=True)
+    t.start()
+    log.info(f"[keepalive] Started — pinging {ping_url} every 10min")
+
+
 # Start scheduler when blueprint is imported
 _start_scheduler()
+_start_keepalive()
 
 
 # ─── StockTwits fetcher ──────────────────────────────────────────────────────
@@ -145,7 +175,7 @@ def fetch_stocktwits(sym):
 
         total = len(messages) or 1
         bull_pct = round(bull_count / total * 100)
-        bear_pct = 100 - bull_pct
+        bear_pct = round(bear_count / total * 100)
 
         # StockTwits momo component: volume surge + sentiment strength
         vol_score  = min(len(messages) / 30 * 40, 40)

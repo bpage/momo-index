@@ -181,6 +181,7 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
   <div class="loader-logo">MOMO<em style="color:var(--green)">IDX</em></div>
   <div class="loader-bar-wrap"><div class="loader-bar" id="lbar"></div></div>
   <div class="loader-msg" id="lmsg">CONNECTING...</div>
+  <div class="loader-msg" id="lelapsed" style="color:var(--amber);display:none"></div>
 </div>
 
 <!-- DETAIL MODAL -->
@@ -879,11 +880,30 @@ setInterval(updateClock,1000); updateClock();
 var _retryCount = 0;
 var _maxRetries = 3;
 var _dataLoaded = false;
+var _elapsedTimer = null;
+var _elapsedStart = null;
 
 function fetchWithTimeout(url, ms) {
   var ctrl = new AbortController();
   var timer = setTimeout(function(){ ctrl.abort(); }, ms);
   return fetch(url, {signal: ctrl.signal}).finally(function(){ clearTimeout(timer); });
+}
+
+function startElapsedTimer() {
+  _elapsedStart = Date.now();
+  var el = document.getElementById('lelapsed');
+  if (el) el.style.display = 'block';
+  _elapsedTimer = setInterval(function() {
+    var secs = Math.floor((Date.now() - _elapsedStart) / 1000);
+    var el = document.getElementById('lelapsed');
+    if (el) el.textContent = 'WARMING UP... ' + secs + 's';
+  }, 1000);
+}
+
+function stopElapsedTimer() {
+  if (_elapsedTimer) { clearInterval(_elapsedTimer); _elapsedTimer = null; }
+  var el = document.getElementById('lelapsed');
+  if (el) el.style.display = 'none';
 }
 
 async function refresh(isRetry) {
@@ -918,8 +938,11 @@ async function refresh(isRetry) {
   }
 
   try {
-    var timeout = _retryCount === 0 ? 15000 : 90000;
-    setLoader(_dataLoaded ? 90 : 20, _retryCount > 0 ? 'WAKING SERVER (ATTEMPT ' + (_retryCount+1) + ')...' : 'FETCHING X/TWITTER DATA...');
+    // 70s on first try (covers Render cold start), 90s on retries
+    var timeout = _retryCount === 0 ? 70000 : 90000;
+    var loadMsg = _retryCount > 0 ? 'WAKING SERVER (ATTEMPT ' + (_retryCount+1) + ')...' : 'FETCHING LIVE DATA...';
+    setLoader(_dataLoaded ? 90 : 20, loadMsg);
+    if (!_dataLoaded && _retryCount === 0) startElapsedTimer();
     var res = await fetchWithTimeout(BACKEND + '/api/momo', timeout);
     if (!res.ok) throw new Error('bad response');
     var json = await res.json();
@@ -934,6 +957,7 @@ async function refresh(isRetry) {
       return s;
     });
 
+    stopElapsedTimer();
     setLoader(80,'CALCULATING MOMO SCORES...');
     document.getElementById('err-banner').style.display='none';
     // Reset banner styles
@@ -969,6 +993,7 @@ async function refresh(isRetry) {
       return;
     }
 
+    stopElapsedTimer();
     document.getElementById('err-banner').style.display='block';
     document.getElementById('err-banner').style.background='';
     document.getElementById('err-banner').style.borderColor='';
