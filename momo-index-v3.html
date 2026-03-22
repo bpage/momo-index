@@ -374,31 +374,36 @@ function saveScan(stocks, indexScore) {
 }
 
 function computeStreaks(history, todayStocks) {
-  const todaySyms = new Set(todayStocks.map(s => s.sym));
+  // Streaks and movers are based on TOP 10 by momoScore only.
+  // The universe is always the same 20 tickers, so raw presence is meaningless.
+  function top10set(stocks) {
+    return new Set(
+      stocks.slice().sort((a,b) => b.momoScore - a.momoScore).slice(0,10).map(s => s.sym)
+    );
+  }
+
+  const todaySyms = top10set(todayStocks);
   const todayMap = {};
   todayStocks.forEach(s => { todayMap[s.sym] = s; });
 
-  // Get yesterday's stocks (most recent day before today)
+  // Get yesterday's top 10 (most recent history entry before today)
   const yesterdayEntry = history.length >= 2 ? history[history.length - 2] : null;
-  const yesterdaySyms = yesterdayEntry ? new Set(yesterdayEntry.stocks.map(s => s.sym)) : new Set();
+  const yesterdaySyms = yesterdayEntry ? top10set(yesterdayEntry.stocks) : new Set();
   const yesterdayMap = {};
   if (yesterdayEntry) yesterdayEntry.stocks.forEach(s => { yesterdayMap[s.sym] = s; });
 
-  // Count consecutive days for each of today's tickers (walking backwards)
+  // Count consecutive days in top 10 for each of today's top-10 tickers
   const streaks = [];
   todaySyms.forEach(sym => {
-    let days = 1; // Today counts as 1
-    // Walk backwards from second-to-last entry
+    let days = 1;
     for (let i = history.length - 2; i >= 0; i--) {
-      const daySyms = new Set(history[i].stocks.map(s => s.sym));
-      if (daySyms.has(sym)) {
+      if (top10set(history[i].stocks).has(sym)) {
         days++;
       } else {
-        break; // Streak broken
+        break;
       }
     }
-    // Compute trend vs yesterday
-    let trend = ''; // no data
+    let trend = '';
     if (yesterdayMap[sym]) {
       const diff = (todayMap[sym]?.momoScore || 0) - (yesterdayMap[sym]?.momoScore || 0);
       if (diff > 5) trend = 'up';
@@ -406,19 +411,12 @@ function computeStreaks(history, todayStocks) {
       else trend = 'eq';
     }
     if (days >= 2) {
-      streaks.push({
-        sym,
-        days,
-        trend,
-        score: todayMap[sym]?.momoScore || 0,
-        stock: todayMap[sym]
-      });
+      streaks.push({ sym, days, trend, score: todayMap[sym]?.momoScore || 0, stock: todayMap[sym] });
     }
   });
-  // Sort by streak length desc, then momoScore desc
   streaks.sort((a,b) => b.days - a.days || b.score - a.score);
 
-  // New today: in today but not yesterday
+  // New in today's top 10 but not yesterday's
   const newToday = [];
   todaySyms.forEach(sym => {
     if (!yesterdaySyms.has(sym)) {
@@ -427,7 +425,7 @@ function computeStreaks(history, todayStocks) {
   });
   newToday.sort((a,b) => b.score - a.score);
 
-  // Dropped off: in yesterday but not today
+  // Dropped out of top 10: was in yesterday's top 10, not today's
   const droppedOff = [];
   yesterdaySyms.forEach(sym => {
     if (!todaySyms.has(sym)) {
@@ -866,7 +864,8 @@ function hideLoader(){
 function updateClock(){
   var now=new Date();
   document.getElementById('clock').textContent=now.toLocaleTimeString('en-US',{hour12:false});
-  var h=now.getHours(),m=now.getMinutes(),d=now.getDay(),mins=h*60+m;
+  var et=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
+  var h=et.getHours(),m=et.getMinutes(),d=et.getDay(),mins=h*60+m;
   var s;
   if(d===0||d===6) s='WEEKEND \u00B7 CLOSED';
   else if(mins>=570&&mins<960) s='NYSE OPEN \u00B7 LIVE';
