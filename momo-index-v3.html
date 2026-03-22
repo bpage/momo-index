@@ -263,7 +263,7 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
   </div>
 </div>
 
-<footer><span class="blink">&#x25AE;</span> X/TWITTER SENTIMENT &middot; AUTO-REFRESH 90s &middot; MOMO INDEX v4.1</footer>
+<footer><span class="blink">&#x25AE;</span> X/TWITTER SENTIMENT &middot; AUTO-REFRESH 90s &middot; MOMO INDEX v4.2</footer>
 
 <script>
 const BACKEND = '';
@@ -969,6 +969,9 @@ async function refresh(isRetry) {
     _dataLoaded = true;
 
     var score = renderScore(stocks);
+    if (!json.lastSocialScanAt) {
+      document.getElementById('score-desc').textContent += ' [ST ONLY \u2014 social scan pending]';
+    }
     renderTop10(stocks);
     renderStats(stocks);
     renderTicker(stocks);
