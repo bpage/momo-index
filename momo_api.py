@@ -13,6 +13,7 @@ Score weights:
 import time
 import threading
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Blueprint, jsonify
 import requests
 
@@ -217,17 +218,14 @@ def momo_index():
         scan_count   = _social_cache['scan_count']
 
     results = []
-    for sym in UNIVERSE:
-        st_data = fetch_stocktwits(sym)
-        if not st_data:
-            continue
-
-        blend = _blend_score(sym, st_data['stScore'])
-        results.append({
-            **st_data,
-            **blend,
-        })
-        time.sleep(0.15)  # polite StockTwits rate limit
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures = {ex.submit(fetch_stocktwits, sym): sym for sym in UNIVERSE}
+        for fut in as_completed(futures):
+            st_data = fut.result()
+            if not st_data:
+                continue
+            blend = _blend_score(st_data['sym'], st_data['stScore'])
+            results.append({**st_data, **blend})
 
     if not results:
         return jsonify({'error': 'StockTwits unavailable'}), 503
