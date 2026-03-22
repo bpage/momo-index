@@ -6,7 +6,7 @@ Gracefully returns empty dict when token is absent.
 To enable:
   1. Create a free app at developer.x.com
   2. Copy the Bearer Token
-  3. Add X_BEARER_TOKEN to Render env vars for covered-calls-bot
+  3. Add X_BEARER_TOKEN to Render env vars for momo-index
 """
 
 import os
@@ -82,7 +82,6 @@ def fetch_x_scores(universe: list, lookback_hours: int = 24) -> dict:
         'max_results': MAX_RESULTS,
         'start_time': cutoff_iso,
         'tweet.fields': 'created_at,public_metrics,entities',
-        'expansions': '',
     }
 
     try:

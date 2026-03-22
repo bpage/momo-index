@@ -119,11 +119,12 @@ def fetch_reddit_scores(universe: list, lookback_hours: int = 24) -> dict:
         log.info("[reddit] No signals found this scan")
         return {}
 
-    # Normalize to 0–100 scale
-    max_score = max(raw_scores.values()) or 1
+    # Log-normalize to 0–100: compresses dominant tickers, lifts low-volume ones
+    log_scores = {sym: math.log1p(score) for sym, score in raw_scores.items()}
+    max_log = max(log_scores.values()) or 1
     normalized = {
-        sym: round(min(score / max_score * 100, 100), 1)
-        for sym, score in raw_scores.items()
+        sym: round(min(log_scores[sym] / max_log * 100, 100), 1)
+        for sym in raw_scores
         if sym in universe_set
     }
 
