@@ -11,6 +11,7 @@ Score weights:
 """
 
 import os
+import math
 import time
 import threading
 import logging
@@ -155,27 +156,37 @@ def fetch_stocktwits(sym):
 
         bull_count = 0
         bear_count = 0
+        bull_weight = 0.0
+        bear_weight = 0.0
+        total_weight = 0.0
         posts = []
 
         for m in messages:
             sent = (m.get('entities') or {}).get('sentiment', {})
             sentiment = sent.get('basic') if sent else None
+            followers = m.get('user', {}).get('followers', 0)
+            influence_weight = 1 + math.log1p(max(followers, 0))
+
             if sentiment == 'Bullish':
                 bull_count += 1
+                bull_weight += influence_weight
             elif sentiment == 'Bearish':
                 bear_count += 1
+                bear_weight += influence_weight
+            total_weight += influence_weight
 
             posts.append({
                 'body': m.get('body', '')[:140],
                 'sentiment': sentiment or 'Neutral',
                 'user': m.get('user', {}).get('username', 'trader'),
-                'followers': m.get('user', {}).get('followers', 0),
+                'followers': followers,
                 'time': m.get('created_at', ''),
             })
 
         total = len(messages) or 1
-        bull_pct = round(bull_count / total * 100)
-        bear_pct = round(bear_count / total * 100)
+        effective_weight = total_weight or 1.0
+        bull_pct = round(bull_weight / effective_weight * 100)
+        bear_pct = round(bear_weight / effective_weight * 100)
 
         # StockTwits momo component: volume surge + sentiment strength
         vol_score  = min(len(messages) / 30 * 40, 40)
