@@ -66,7 +66,6 @@ def fetch_reddit_scores(universe: list, lookback_hours: int = 24) -> dict:
     universe_set = set(universe)
     cutoff = time.time() - (lookback_hours * 3600)
     raw_scores = defaultdict(float)
-    mention_counts = defaultdict(int)
 
     for subreddit in SUBREDDITS:
         weight = SUBREDDIT_WEIGHTS.get(subreddit, 1.0)
@@ -109,7 +108,6 @@ def fetch_reddit_scores(universe: list, lookback_hours: int = 24) -> dict:
 
                 for sym in set(tickers):  # dedupe per post
                     raw_scores[sym] += post_score * weight
-                    mention_counts[sym] += 1
 
             time.sleep(_REQUEST_DELAY)
 

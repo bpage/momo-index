@@ -496,7 +496,7 @@ function openModal(s) {
   if (bp >= 80)            reasons.push('Heavily bullish sentiment (' + bp + '% bull)');
   if (s.momoScore >= 80)   reasons.push('Top-tier momentum score');
   if (s.totalTweets >= 3 && s.totalLikes >= 50) reasons.push('Consistent signal across multiple traders');
-  if (reasons.length === 0) reasons.push('Organic discovery via X keyword scan');
+  if (reasons.length === 0) reasons.push('Low activity \u2014 monitoring for signal buildup');
 
   // History context
   const tickerHist = getTickerHistory(_history, s.sym);
@@ -599,10 +599,11 @@ function renderScore(stocks) {
   document.getElementById('score-upd').textContent = new Date().toLocaleTimeString();
 
   const avgBull = Math.round(stocks.reduce(function(s,d){return s+(d.bullPct!=null?d.bullPct:50);},0) / (stocks.length||1));
+  const avgBear = Math.round(stocks.reduce(function(s,d){return s+(d.bearPct!=null?d.bearPct:50);},0) / (stocks.length||1));
   document.getElementById('bull-pct').textContent = avgBull+'%';
-  document.getElementById('bear-pct').textContent = (100-avgBull)+'%';
+  document.getElementById('bear-pct').textContent = avgBear+'%';
   document.getElementById('bull-bar').style.width = avgBull+'%';
-  document.getElementById('bear-bar').style.width = (100-avgBull)+'%';
+  document.getElementById('bear-bar').style.width = avgBear+'%';
   return score;
 }
 
