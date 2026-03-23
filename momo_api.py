@@ -2,7 +2,7 @@
 momo_api.py — MOMO Index backend
 Fetches StockTwits, Reddit, and X (Twitter) data server-side.
 Blends three social signals into a unified MOMO score.
-Background APScheduler job refreshes social data every 20 minutes.
+Background daemon thread refreshes social data every 20 minutes.
 
 Score weights:
   StockTwits : 60%  (volume + sentiment)
