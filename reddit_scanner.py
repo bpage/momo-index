@@ -5,6 +5,7 @@ Scans r/wallstreetbets, r/stocks, r/investing, r/options for $TICKER mentions.
 Scores by upvotes, comments, and recency decay.
 """
 
+import re
 import requests
 import time
 import math
@@ -47,7 +48,6 @@ def _score_post(upvotes: int, comments: int, created_utc: float) -> float:
 
 def _extract_cashtags(text: str, universe: set) -> list:
     """Extract $TICKER mentions that exist in our universe."""
-    import re
     raw = re.findall(r'\$([A-Z]{1,5})', text.upper())
     return [t for t in raw if t in universe]
 
@@ -104,7 +104,6 @@ def fetch_reddit_scores(universe: list, lookback_hours: int = 24) -> dict:
                 tickers = _extract_cashtags(full_text, universe_set)
                 if not tickers:
                     # Also check title for naked symbols in WSB-style posts
-                    import re
                     bare = re.findall(r'\b([A-Z]{2,5})\b', title.upper())
                     tickers = [t for t in bare if t in universe_set]
 

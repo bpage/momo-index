@@ -263,7 +263,7 @@ footer{text-align:center;font-size:8px;color:var(--muted2);letter-spacing:2px;pa
   </div>
 </div>
 
-<footer><span class="blink">&#x25AE;</span> X/TWITTER SENTIMENT &middot; AUTO-REFRESH 90s &middot; MOMO INDEX v4.2</footer>
+<footer><span class="blink">&#x25AE;</span> REDDIT + STOCKTWITS &middot; AUTO-REFRESH 90s &middot; MOMO INDEX v4.2</footer>
 
 <script>
 const BACKEND = '';
@@ -629,7 +629,7 @@ function renderTop10(stocks) {
       '<div>' +
         '<div class="s-sym">' + s.sym + '</div>' +
         '<div class="s-name">' + (s.name||s.sym) + '</div>' +
-        '<div class="s-hint">' + (s.totalTweets||0) + ' posts \u00B7 ' + (s.totalLikes||0) + ' likes</div>' +
+        '<div class="s-hint">' + (s.totalTweets||0) + ' posts \u00B7 ' + (s.totalLikes||0) + ' bulls</div>' +
       '</div>' +
       '<div>' +
         '<div class="s-chg" style="color:' + col + '">' + bp + '%<br><span style="font-size:7px;color:var(--muted)">' + (s.sentiment||'neutral').toUpperCase() + '</span></div>' +
@@ -786,7 +786,7 @@ function renderSignals(stocks) {
       '</div>' +
       '<div>' +
         '<div class="sig-text">' + tweetText + '</div>' +
-        '<div class="sig-meta">' + (s.totalTweets||0) + ' posts &#x00B7; ' + (s.totalLikes||0) + ' likes &#x00B7; ' + (s.bullPct||50) + '% bull</div>' +
+        '<div class="sig-meta">' + (s.totalTweets||0) + ' posts &#x00B7; ' + (s.totalLikes||0) + ' bulls &#x00B7; ' + (s.bullPct||50) + '% bull</div>' +
       '</div>';
     item.addEventListener('click', (function(stock){ return function(){ openModal(stock); }; })(s));
     el.appendChild(item);
