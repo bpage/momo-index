@@ -451,7 +451,10 @@ function getTickerHistory(history, sym) {
 function getTickerStreak(history, sym) {
   let days = 0;
   for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].stocks.some(s => s.sym === sym)) {
+    const top10 = new Set(
+      history[i].stocks.slice().sort((a,b) => b.momoScore - a.momoScore).slice(0,10).map(s => s.sym)
+    );
+    if (top10.has(sym)) {
       days++;
     } else {
       break;
@@ -461,7 +464,12 @@ function getTickerStreak(history, sym) {
 }
 
 function countAppearances(history, sym) {
-  return history.filter(day => day.stocks.some(s => s.sym === sym)).length;
+  return history.filter(day => {
+    const top10 = new Set(
+      day.stocks.slice().sort((a,b) => b.momoScore - a.momoScore).slice(0,10).map(s => s.sym)
+    );
+    return top10.has(sym);
+  }).length;
 }
 
 // ── SIGNAL ────────────────────────────────────────────
@@ -705,7 +713,6 @@ function renderMovers(stocks, history) {
   if (data.newToday.length > 0) {
     var newLabel = document.createElement('div');
     newLabel.className = 'mover-section-label';
-    newLabel.textContent = '&#x1F195; NEW TODAY (' + data.newToday.length + ')';
     newLabel.innerHTML = '&#x1F195; NEW TODAY (' + data.newToday.length + ')';
     el.appendChild(newLabel);
 
