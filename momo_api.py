@@ -191,8 +191,8 @@ def fetch_stocktwits(sym):
         # StockTwits momo component: volume surge + sentiment strength
         # Centered around 50% neutral so bear sentiment subtracts from score
         vol_score  = min(len(messages) / 30 * 40, 40)
-        sent_score = (bull_pct - 50) * 1.2          # range: -60 to +60
-        st_score   = round(vol_score + sent_score)  # range: -60 to +100
+        sent_score = (bull_pct - 50) * 1.2              # range: -60 to +60
+        st_score   = max(0, round(vol_score + sent_score))  # clamp: 0 to 100
 
         return {
             'sym': sym,
