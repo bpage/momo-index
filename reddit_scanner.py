@@ -70,22 +70,26 @@ def fetch_reddit_scores(universe: list, lookback_hours: int = 24) -> dict:
     for subreddit in SUBREDDITS:
         weight = SUBREDDIT_WEIGHTS.get(subreddit, 1.0)
         try:
-            # Fetch hot posts — reliable signal for trending
-            url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit=100"
-            resp = requests.get(url, headers=HEADERS, timeout=10)
-            if resp.status_code == 429:
-                log.warning(f"[reddit] Rate limited on r/{subreddit}, skipping")
-                time.sleep(_REQUEST_DELAY * 3)
-                continue
-            if resp.status_code != 200:
-                log.warning(f"[reddit] r/{subreddit} returned {resp.status_code}")
+            # Fetch both hot and rising — dedupe by id so a post isn't double-counted
+            seen_ids: dict = {}
+            for feed in ('hot', 'rising'):
+                url = f"https://www.reddit.com/r/{subreddit}/{feed}.json?limit=100"
+                resp = requests.get(url, headers=HEADERS, timeout=10)
+                if resp.status_code == 429:
+                    log.warning(f"[reddit] Rate limited on r/{subreddit}/{feed}, skipping feed")
+                    time.sleep(_REQUEST_DELAY * 3)
+                    continue
+                if resp.status_code != 200:
+                    log.warning(f"[reddit] r/{subreddit}/{feed} returned {resp.status_code}")
+                    time.sleep(_REQUEST_DELAY)
+                    continue
+                for post_wrap in resp.json().get('data', {}).get('children', []):
+                    pid = post_wrap.get('data', {}).get('id')
+                    if pid and pid not in seen_ids:
+                        seen_ids[pid] = post_wrap
                 time.sleep(_REQUEST_DELAY)
-                continue
 
-            data = resp.json()
-            posts = data.get('data', {}).get('children', [])
-
-            for post_wrap in posts:
+            for post_wrap in seen_ids.values():
                 post = post_wrap.get('data', {})
                 created_utc = float(post.get('created_utc', 0))
                 if created_utc < cutoff:
@@ -108,8 +112,6 @@ def fetch_reddit_scores(universe: list, lookback_hours: int = 24) -> dict:
 
                 for sym in set(tickers):  # dedupe per post
                     raw_scores[sym] += post_score * weight
-
-            time.sleep(_REQUEST_DELAY)
 
         except Exception as e:
             log.error(f"[reddit] Error scanning r/{subreddit}: {e}")
