@@ -555,7 +555,7 @@ function openModal(s) {
       '<div class="modal-score-bar-wrap">' +
         '<div style="font-size:8px;color:var(--muted);letter-spacing:1px">MOMO SCORE</div>' +
         '<div class="modal-score-bar">' +
-          '<div class="modal-score-bar-fill" style="width:' + s.momoScore + '%;background:' + col + '"></div>' +
+          '<div class="modal-score-bar-fill" style="width:' + Math.max(0,s.momoScore) + '%;background:' + col + '"></div>' +
         '</div>' +
         '<div class="modal-tag ' + tagCls + '">' + sentLabel + '</div>' +
       '</div>' +
@@ -635,7 +635,7 @@ function renderTop10(stocks) {
         '<div class="s-chg" style="color:' + col + '">' + bp + '%<br><span style="font-size:7px;color:var(--muted)">' + (s.sentiment||'neutral').toUpperCase() + '</span></div>' +
       '</div>' +
       '<div class="s-score-wrap">' +
-        '<div class="s-bar"><div class="s-bar-fill" style="width:' + s.momoScore + '%;background:' + col + '"></div></div>' +
+        '<div class="s-bar"><div class="s-bar-fill" style="width:' + Math.max(0,s.momoScore) + '%;background:' + col + '"></div></div>' +
         '<div class="s-momo">MOM ' + s.momoScore + '</div>' +
       '</div>';
     row.addEventListener('click', (function(stock){ return function(){ openModal(stock); }; })(s));
